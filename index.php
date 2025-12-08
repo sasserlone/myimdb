@@ -41,7 +41,7 @@ header('Content-Type: text/html; charset=utf-8');
                     </li>
                     
                     <li class="nav-item">
-                        <a class="nav-link <?=($mod == 'import') ? 'active' : '';?>" href="?mod=import">Import</a>
+                        <a class="nav-link <?=($mod == 'movies') ? 'active' : '';?>" href="?mod=movies">Filme</a>
                     </li>
             
                     <!-- Dropdown Menü für Imports -->

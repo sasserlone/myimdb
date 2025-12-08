@@ -12,6 +12,9 @@ function loadModule($mod)
         case 'import_movies':
             require_once 'mod/import_movies.php';
             break;
+        case 'movies':
+            require_once 'mod/movies.php';
+            break;
       default:
             require_once 'mod/home.php';
     }

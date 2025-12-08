@@ -1,7 +1,5 @@
 <?php
 
-require_once __DIR__ . '/../inc/database.inc.php';
-
 $message = '';
 $error = '';
 
@@ -159,244 +157,207 @@ try {
 
 ?>
 
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IMDb CSV Import</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        
-        .container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 600px;
-            width: 100%;
-            padding: 40px;
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 28px;
-        }
-        
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-        
-        .message {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #4caf50;
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
-        
-        .error {
-            border-left-color: #f44336;
-            background-color: #ffebee;
-            color: #c62828;
-        }
-        
-        .drop-zone {
-            border: 2px dashed #667eea;
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background-color: #f8f9ff;
-            margin-bottom: 20px;
-        }
-        
-        .drop-zone:hover {
-            border-color: #764ba2;
-            background-color: #f0f2ff;
-        }
-        
-        .drop-zone.drag-over {
-            border-color: #4caf50;
-            background-color: #e8f5e9;
-            transform: scale(1.02);
-        }
-        
-        .drop-zone-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-        
-        .drop-zone-text {
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        
-        .drop-zone-subtext {
-            font-size: 13px;
-            color: #999;
-        }
-        
-        .file-input {
-            display: none;
-        }
-        
-        .divider {
-            text-align: center;
-            margin: 25px 0;
-            color: #999;
-            font-size: 13px;
-        }
-        
-        .divider::before,
-        .divider::after {
-            content: '';
-            display: inline-block;
-            width: 30%;
-            height: 1px;
-            background: #ddd;
-            vertical-align: middle;
-        }
-        
-        .divider::before {
-            margin-right: 10px;
-        }
-        
-        .divider::after {
-            margin-left: 10px;
-        }
-        
-        .button-group {
-            display: flex;
-            gap: 10px;
-        }
-        
-        button {
-            flex: 1;
-            padding: 12px 24px;
-            font-size: 14px;
-            font-weight: 600;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        
-        .btn-secondary {
-            background: #f5f5f5;
-            color: #333;
-        }
-        
-        .btn-secondary:hover {
-            background: #e9e9e9;
-        }
-        
-        .file-name {
-            margin-top: 15px;
-            padding: 10px;
-            background: #f5f5f5;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #666;
-            display: none;
-        }
-        
-        .file-name.show {
-            display: block;
-        }
-        
-        .info-box {
-            background: #f0f7ff;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #1565c0;
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🎬 IMDb CSV Import</h1>
-        <p class="subtitle">Importiere deine IMDb-Bewertungen in die Datenbank</p>
-        
-        <?php if (!empty($message)): ?>
-            <div class="message"><?php echo $message; ?></div>
-        <?php endif; ?>
-        
-        <?php if (!empty($error)): ?>
-            <div class="message error"><?php echo $error; ?></div>
-        <?php endif; ?>
-        
-        <form id="importForm" method="POST" enctype="multipart/form-data">
-            <!-- Drag & Drop Zone -->
-            <div class="drop-zone" id="dropZone">
-                <div class="drop-zone-icon">📁</div>
-                <div class="drop-zone-text">CSV-Datei hierher ziehen</div>
-                <div class="drop-zone-subtext">oder klicken zum Durchsuchen</div>
-            </div>
-            
-            <input type="file" id="csvFile" name="csv_file" class="file-input" accept=".csv">
-            <div class="file-name" id="fileName"></div>
-            
-            <div class="divider">oder</div>
-            
-            <!-- Button Upload -->
-            <div class="button-group">
-                <button type="button" class="btn-secondary" onclick="document.getElementById('csvFile').click()">
-                    📁 Datei wählen
-                </button>
-                <button type="submit" class="btn-primary" id="submitBtn" disabled>
-                    📤 Importieren
-                </button>
-            </div>
-            
-            <div class="info-box">
-                <strong>ℹ️ Hinweise:</strong><br>
-                • CSV-Format von IMDb-Bewertungen<br>
-                • Doppelte Einträge (nach Const) werden übersprungen<br>
-                • Erforderlich: Const und Title
-            </div>
-        </form>
-    </div>
+<style>
+    #import-module .message {
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        border-left: 4px solid #4caf50;
+        background-color: #e8f5e9;
+        color: #2e7d32;
+    }
     
-    <script>
+    #import-module .message.error {
+        border-left-color: #f44336;
+        background-color: #ffebee;
+        color: #c62828;
+    }
+    
+    #import-module .drop-zone {
+        border: 2px dashed #667eea;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background-color: #f8f9ff;
+        margin-bottom: 20px;
+    }
+    
+    #import-module .drop-zone:hover {
+        border-color: #764ba2;
+        background-color: #f0f2ff;
+    }
+    
+    #import-module .drop-zone.drag-over {
+        border-color: #4caf50;
+        background-color: #e8f5e9;
+        transform: scale(1.02);
+    }
+    
+    #import-module .drop-zone-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+    
+    #import-module .drop-zone-text {
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    
+    #import-module .drop-zone-subtext {
+        font-size: 13px;
+        color: #999;
+    }
+    
+    #import-module .file-input {
+        display: none;
+    }
+    
+    #import-module .divider {
+        text-align: center;
+        margin: 25px 0;
+        color: #999;
+        font-size: 13px;
+    }
+    
+    #import-module .divider::before,
+    #import-module .divider::after {
+        content: '';
+        display: inline-block;
+        width: 30%;
+        height: 1px;
+        background: #ddd;
+        vertical-align: middle;
+    }
+    
+    #import-module .divider::before {
+        margin-right: 10px;
+    }
+    
+    #import-module .divider::after {
+        margin-left: 10px;
+    }
+    
+    #import-module .button-group {
+        display: flex;
+        gap: 10px;
+    }
+    
+    #import-module .import-btn {
+        flex: 1;
+        padding: 12px 24px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    #import-module .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    #import-module .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    #import-module .btn-secondary {
+        background: #f5f5f5;
+        color: #333;
+    }
+    
+    #import-module .btn-secondary:hover {
+        background: #e9e9e9;
+    }
+    
+    #import-module .file-name {
+        margin-top: 15px;
+        padding: 10px;
+        background: #f5f5f5;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #666;
+        display: none;
+    }
+    
+    #import-module .file-name.show {
+        display: block;
+    }
+    
+    #import-module .info-box {
+        background: #f0f7ff;
+        border-left: 4px solid #2196f3;
+        padding: 15px;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #1565c0;
+        margin-top: 20px;
+    }
+</style>
+
+<div id="import-module">
+    <div class="row">
+        <div class="col-md-8">
+            <h2>🎬 IMDb CSV Import</h2>
+            <p class="text-muted">Importiere deine IMDb-Bewertungen in die Datenbank</p>
+            
+            <?php if (!empty($message)): ?>
+                <div class="message"><?php echo $message; ?></div>
+            <?php endif; ?>
+            
+            <?php if (!empty($error)): ?>
+                <div class="message error"><?php echo $error; ?></div>
+            <?php endif; ?>
+            
+            <form id="importForm" method="POST" enctype="multipart/form-data">
+                <!-- Drag & Drop Zone -->
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-icon">📁</div>
+                    <div class="drop-zone-text">CSV-Datei hierher ziehen</div>
+                    <div class="drop-zone-subtext">oder klicken zum Durchsuchen</div>
+                </div>
+                
+                <input type="file" id="csvFile" name="csv_file" class="file-input" accept=".csv">
+                <div class="file-name" id="fileName"></div>
+                
+                <div class="divider">oder</div>
+                
+                <!-- Button Upload -->
+                <div class="button-group">
+                    <button type="button" class="import-btn btn-secondary" onclick="document.getElementById('csvFile').click()">
+                        📁 Datei wählen
+                    </button>
+                    <button type="submit" class="import-btn btn-primary" id="submitBtn" disabled>
+                        📤 Importieren
+                    </button>
+                </div>
+                
+                <div class="info-box">
+                    <strong>ℹ️ Hinweise:</strong><br>
+                    • CSV-Format von IMDb-Bewertungen<br>
+                    • Doppelte Einträge (nach Const) werden übersprungen<br>
+                    • Erforderlich: Const und Title
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
         const dropZone = document.getElementById('dropZone');
         const csvFile = document.getElementById('csvFile');
         const fileName = document.getElementById('fileName');
         const submitBtn = document.getElementById('submitBtn');
         const importForm = document.getElementById('importForm');
+        
+        if (!dropZone) return; // Sicherheit: nur wenn Element existiert
         
         // Drag & Drop Events
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -455,6 +416,5 @@ try {
                 alert('Bitte wählen Sie eine CSV-Datei aus.');
             }
         });
-    </script>
-</body>
-</html>
+    });
+</script>

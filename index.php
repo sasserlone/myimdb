@@ -30,7 +30,7 @@ header('Content-Type: text/html; charset=utf-8');
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">Training Tracker</a>
+            <a class="navbar-brand" href="#">MyIMDb</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -40,67 +40,21 @@ header('Content-Type: text/html; charset=utf-8');
                         <a class="nav-link <?=($mod == 'home') ? 'active' : '';?>" href="?mod=home">Home</a>
                     </li>
                     
-                    <!-- Dropdown Menü für Aktivitäten -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle <?=($mod == 'records' || $mod == 'volumes') ? 'active' : '';?>" href="#" id="rekordeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Aktivitäten
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="rekordeDropdown">
-                        	<li><a class="dropdown-item" href="?mod=trainings">Trainings</a></li>
-                            <li><a class="dropdown-item" href="?mod=recordsactivity">Rekorde</a></li>
-                            <li><a class="dropdown-item" href="?mod=recordsvolume">Zeiträume</a></li>
-                            <li><a class="dropdown-item" href="?mod=fastestintervals">schnellste Distanzen</a></li>
-                            <li><a class="dropdown-item" href="?mod=raceresults">Wettkämpfe</a></li>
-                        </ul>
-                    </li>
-                    
-                    <!-- Dropdown Menü für Fitness -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle <?=($mod == 'fitness' || $mod == 'runprognose') ? 'active' : '';?>" href="#" id="fitnessDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Fitness
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="streaksDropdown">
-                            <li><a class="dropdown-item" href="?mod=fitness">Daten</a></li>
-                            <li><a class="dropdown-item" href="?mod=runprognose">Laufprognose</a></li>
-                            <li><a class="dropdown-item" href="?mod=segments">Segmente</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?=($mod == 'timechart') ? 'active' : '';?>" href="?mod=timechart">Trainingsumfänge</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?=($mod == 'goals') ? 'active' : '';?>" href="?mod=goals">Trainingsziele</a>
-                    </li>
                     <li class="nav-item">
                         <a class="nav-link <?=($mod == 'import') ? 'active' : '';?>" href="?mod=import">Import</a>
                     </li>
             
-                    <!-- Dropdown Menü für Streaks -->
+                    <!-- Dropdown Menü für Imports -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle <?=($mod == 'streaksrun' || $mod == 'streakssteps') ? 'active' : '';?>" href="#" id="streaksDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Streaks
+                        <a class="nav-link dropdown-toggle <?=($mod == 'import_ratings' || $mod == 'import_movies') ? 'active' : '';?>" href="#" id="importDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Import
                         </a>
-                        <ul class="dropdown-menu" aria-labelledby="streaksDropdown">
-                            <li><a class="dropdown-item" href="?mod=streaksrun">Laufen</a></li>
-                            <li><a class="dropdown-item" href="?mod=streakssteps">Schritte</a></li>
+                        <ul class="dropdown-menu" aria-labelledby="importDropdown">
+                            <li><a class="dropdown-item" href="?mod=import_ratings">Ratings</a></li>
+                            <li><a class="dropdown-item" href="?mod=import_movies">Filme</a></li>
                         </ul>
                     </li>
                     
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle <?=($mod == 'dataimport' || $mod == 'datamaintanance') ? 'active' : '';?>" href="#" id="dataDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Daten
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="dataDropdown">
-                            <li><a class="dropdown-item" href="?mod=datafitness">Fitness</a></li>
-                            <li><a class="dropdown-item" href="?mod=datamaintance">Datenpflege</a></li>
-                            <li><a class="dropdown-item" href="?mod=dataimport">Import</a></li>
-                            <li><a class="dropdown-item" href="?mod=datasegments">Segmente</a></li>
-                            <li><a class="dropdown-item" href="?mod=datafastestintervals">schnellste Intervalle</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?=($mod == 'summary') ? 'active' : '';?>" href="?mod=summary">Übersicht</a>
-                    </li>
                 </ul>
                 <div class="d-flex">
                     <button id="toggle-mode" class="btn btn-outline-secondary btn-sm ms-2" title="Dark/Light Mode">🌙</button>

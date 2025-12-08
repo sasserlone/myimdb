@@ -66,10 +66,10 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                         <th>Titel</th>
                         <th>Jahr</th>
                         <th>IMDb</th>
-                        <th>Deine Bewertung</th>
+                        <th>Ich</th>
                         <th>Laufzeit</th>
                         <th>Genres</th>
-                        <th>Regie</th>
+                        <th>Type</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,13 +80,27 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                             <tr>
                                 <td><?php echo h($offset + $i + 1); ?></td>
                                 <td><?php echo h($m['const']); ?></td>
-                                <td><?php echo h($m['title']); ?></td>
+                                <td>
+                                    <?php if (!empty($m['url'])): ?>
+                                        <a href="<?php echo h($m['url']); ?>" target="_blank" rel="noopener noreferrer"><?php echo h($m['title']); ?></a>
+                                    <?php else: ?>
+                                        <?php echo h($m['title']); ?>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo h($m['year']); ?></td>
-                                <td><?php echo $m['imdb_rating'] !== null ? h($m['imdb_rating']) : ''; ?></td>
+                                <td>
+                                    <?php 
+                                    if ($m['imdb_rating'] !== null) {
+                                        $rating = h($m['imdb_rating']);
+                                        $votes = !empty($m['num_votes']) ? ' (' . h($m['num_votes']) . ')' : '';
+                                        echo $rating . $votes;
+                                    }
+                                    ?>
+                                </td>
                                 <td><?php echo $m['your_rating'] !== null ? h($m['your_rating']) : ''; ?></td>
                                 <td><?php echo $m['runtime_mins'] !== null ? h($m['runtime_mins']) . ' min' : ''; ?></td>
                                 <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['genres']); ?></td>
-                                <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['directors']); ?></td>
+                                <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['title_type']); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -94,19 +108,54 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
             </table>
         </div>
 
-        <!-- Pagination -->
+        <!-- Pagination mit Ellipsis -->
         <nav aria-label="Seiten">
-            <ul class="pagination">
+            <ul class="pagination justify-content-center">
                 <?php
                 $baseUrl = '?mod=movies';
                 if ($q !== '') $baseUrl .= '&q=' . urlencode($q);
-                for ($p = 1; $p <= $pages; $p++):
+                
+                // Previous-Link
+                if ($page > 1):
+                    ?><li class="page-item"><a class="page-link" href="<?php echo $baseUrl . '&page=1&per_page=' . $perPage; ?>">&laquo;</a></li><?php
+                endif;
+                
+                // Bestimme welche Seiten angezeigt werden
+                $delta = 2; // Seiten um aktuelle herum
+                $start = max(1, $page - $delta);
+                $end = min($pages, $page + $delta);
+                
+                // Erste Seite(n)
+                if ($start > 1):
+                    ?><li class="page-item"><a class="page-link" href="<?php echo $baseUrl . '&page=1&per_page=' . $perPage; ?>">1</a></li><?php
+                    if ($start > 2):
+                        ?><li class="page-item disabled"><span class="page-link">...</span></li><?php
+                    endif;
+                endif;
+                
+                // Seiten im Bereich
+                for ($p = $start; $p <= $end; $p++):
                     $active = $p === $page ? ' active' : '';
-                ?>
+                    ?>
                     <li class="page-item<?php echo $active; ?>">
                         <a class="page-link" href="<?php echo $baseUrl . '&page=' . $p . '&per_page=' . $perPage; ?>"><?php echo $p; ?></a>
                     </li>
-                <?php endfor; ?>
+                    <?php
+                endfor;
+                
+                // Letzte Seite(n)
+                if ($end < $pages):
+                    if ($end < $pages - 1):
+                        ?><li class="page-item disabled"><span class="page-link">...</span></li><?php
+                    endif;
+                    ?><li class="page-item"><a class="page-link" href="<?php echo $baseUrl . '&page=' . $pages . '&per_page=' . $perPage; ?>"><?php echo $pages; ?></a></li><?php
+                endif;
+                
+                // Next-Link
+                if ($page < $pages):
+                    ?><li class="page-item"><a class="page-link" href="<?php echo $baseUrl . '&page=' . ($page + 1) . '&per_page=' . $perPage; ?>">&raquo;</a></li><?php
+                endif;
+                ?>
             </ul>
         </nav>
 

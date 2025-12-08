@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../inc/database.inc.php';
 
 $message = '';
 $error = '';
@@ -62,39 +63,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                     // Prüfe ob Film bereits existiert
                     $stmt = $pdo->prepare('SELECT id FROM movies WHERE const = ?');
                     $stmt->execute([$const]);
-                    $existing = $stmt->fetch();
-                    
+                    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
                     if ($existing) {
+                        // Film existiert bereits: hole ID und verknüpfe trotzdem Genres
+                        $movieId = (int)$existing['id'];
                         $skipped++;
-                        continue;
+                    } else {
+                        // Film in Datenbank einfügen
+                        $stmt = $pdo->prepare(
+                            'INSERT INTO movies 
+                            (const, your_rating, date_rated, title, original_title, url, title_type, 
+                             imdb_rating, runtime_mins, year, genres, num_votes, release_date, directors)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                        );
+
+                        $stmt->execute([
+                            $const,
+                            !empty($data['your rating']) ? (int)$data['your rating'] : null,
+                            !empty($data['date rated']) ? $data['date rated'] : null,
+                            $title,
+                            trim($data['original title'] ?? ''),
+                            trim($data['url'] ?? ''),
+                            trim($data['title type'] ?? ''),
+                            !empty($data['imdb rating']) ? (float)$data['imdb rating'] : null,
+                            !empty($data['runtime (mins)']) ? (int)$data['runtime (mins)'] : null,
+                            !empty($data['year']) ? (int)$data['year'] : null,
+                            trim($data['genres'] ?? ''),
+                            !empty($data['num votes']) ? (int)str_replace(',', '', $data['num votes']) : null,
+                            !empty($data['release date']) ? $data['release date'] : null,
+                            trim($data['directors'] ?? '')
+                        ]);
+
+                        $movieId = (int)$pdo->lastInsertId();
+                        $imported++;
                     }
-                    
-                    // Film in Datenbank einfügen
-                    $stmt = $pdo->prepare('
-                        INSERT INTO movies 
-                        (const, your_rating, date_rated, title, original_title, url, title_type, 
-                         imdb_rating, runtime_mins, year, genres, num_votes, release_date, directors)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ');
-                    
-                    $stmt->execute([
-                        $const,
-                        !empty($data['your rating']) ? (int)$data['your rating'] : null,
-                        !empty($data['date rated']) ? $data['date rated'] : null,
-                        $title,
-                        trim($data['original title'] ?? ''),
-                        trim($data['url'] ?? ''),
-                        trim($data['title type'] ?? ''),
-                        !empty($data['imdb rating']) ? (float)$data['imdb rating'] : null,
-                        !empty($data['runtime (mins)']) ? (int)$data['runtime (mins)'] : null,
-                        !empty($data['year']) ? (int)$data['year'] : null,
-                        trim($data['genres'] ?? ''),
-                        !empty($data['num votes']) ? (int)str_replace(',', '', $data['num votes']) : null,
-                        !empty($data['release date']) ? $data['release date'] : null,
-                        trim($data['directors'] ?? '')
-                    ]);
-                    
-                    $imported++;
+
+                    // --- Genres verarbeiten und Verknüpfungen anlegen ---
+                    static $stmtFindGenre, $stmtInsertGenre, $stmtInsertMovieGenre;
+                    if (!$stmtFindGenre) {
+                        $stmtFindGenre = $pdo->prepare('SELECT id FROM genres WHERE name = ?');
+                        $stmtInsertGenre = $pdo->prepare('INSERT INTO genres (name) VALUES (?)');
+                        $stmtInsertMovieGenre = $pdo->prepare('INSERT INTO movies_genres (movie_id, genre_id) VALUES (?, ?)');
+                    }
+
+                    $genresStr = trim($data['genres'] ?? '');
+                    if ($genresStr !== '') {
+                        $genresStr = trim($genresStr, '"');
+                        $parts = array_filter(array_map('trim', explode(',', $genresStr)), function($v){ return $v !== ''; });
+                        foreach ($parts as $gname) {
+                            // Suche Genre
+                            $stmtFindGenre->execute([$gname]);
+                            $g = $stmtFindGenre->fetch(PDO::FETCH_ASSOC);
+                            if ($g) {
+                                $genreId = (int)$g['id'];
+                            } else {
+                                $stmtInsertGenre->execute([$gname]);
+                                $genreId = (int)$pdo->lastInsertId();
+                            }
+
+                            // Verknüpfung einfügen (bei doppelten Einträgen ignorieren)
+                            try {
+                                $stmtInsertMovieGenre->execute([$movieId, $genreId]);
+                            } catch (Exception $e) {
+                                // Ignoriere Duplicate-Key Fehler
+                            }
+                        }
+                    }
                     
                 } catch (Exception $e) {
                     $errors[] = 'Fehler in Zeile: ' . implode(' | ', $row) . ' - ' . $e->getMessage();
@@ -149,6 +184,31 @@ try {
             INDEX idx_const (const),
             INDEX idx_title (title),
             INDEX idx_year (year)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ');
+
+    // genres-Tabelle
+    $pdo->exec('
+        CREATE TABLE IF NOT EXISTS genres (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(150) NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_genre_name (name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ');
+
+    // Join-Tabelle movies_genres
+    $pdo->exec('
+        CREATE TABLE IF NOT EXISTS movies_genres (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            movie_id INT NOT NULL,
+            genre_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY ux_movie_genre (movie_id, genre_id),
+            INDEX idx_movie_id (movie_id),
+            INDEX idx_genre_id (genre_id),
+            CONSTRAINT fk_mg_movie FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
+            CONSTRAINT fk_mg_genre FOREIGN KEY (genre_id) REFERENCES genres(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ');
 } catch (Exception $e) {

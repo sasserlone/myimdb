@@ -1,8 +1,6 @@
 <?php
 ini_set('display_errors', true);
 error_reporting(E_ALL);
-require_once __DIR__ . '/inc/global.inc.php';
-require_once __DIR__ . '/inc/components.inc.php';
 require_once __DIR__ . '/inc/database.inc.php';
 require_once __DIR__ . '/mod/module.php';
 
@@ -27,13 +25,9 @@ header('Content-Type: text/html; charset=utf-8');
     <link rel="stylesheet" href="./styles.css?v=1.1">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="./jscript/tablesort.js"></script>
-    <script src="./jscript/day_night.js"></script>
   
 </head>
 <body>
-
-    <!-- Top Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">Training Tracker</a>
@@ -78,7 +72,7 @@ header('Content-Type: text/html; charset=utf-8');
                         <a class="nav-link <?=($mod == 'goals') ? 'active' : '';?>" href="?mod=goals">Trainingsziele</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?=($mod == 'equipment') ? 'active' : '';?>" href="?mod=equipment">Ausrüstung</a>
+                        <a class="nav-link <?=($mod == 'import') ? 'active' : '';?>" href="?mod=import">Import</a>
                     </li>
             
                     <!-- Dropdown Menü für Streaks -->
@@ -119,9 +113,8 @@ header('Content-Type: text/html; charset=utf-8');
     <!-- Hauptinhalt -->
     <div class="container mt-5">
     	<?php
-
-loadModule($mod);
-    ?>
+            loadModule($mod);
+        ?>
     </div>
  </body>
 </html>

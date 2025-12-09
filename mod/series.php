@@ -27,15 +27,35 @@ $total = (int)$stmtCount->fetchColumn();
 
 $pages = max(1, (int)ceil($total / $perPage));
 
-// Daten laden (nur Serien und Miniserien)
+// Daten laden (nur Serien und Miniserien) - mit Staffel- und Episodenzählung
+$sqlBase = '
+    SELECT m.*, 
+           COALESCE(s.season_count, 0) AS season_count, 
+           COALESCE(e.episode_count, 0) AS episode_count
+    FROM movies m
+    LEFT JOIN (
+        SELECT parent_tconst, COUNT(DISTINCT season_number) AS season_count
+        FROM episodes
+        WHERE parent_tconst IS NOT NULL
+        GROUP BY parent_tconst
+    ) s ON s.parent_tconst = m.const
+    LEFT JOIN (
+        SELECT parent_tconst, COUNT(*) AS episode_count
+        FROM episodes
+        WHERE parent_tconst IS NOT NULL
+        GROUP BY parent_tconst
+    ) e ON e.parent_tconst = m.const
+    WHERE m.title_type IN ("Fernsehserie", "Miniserie")
+';
+
 if ($q !== '') {
-    $stmt = $pdo->prepare('SELECT * FROM movies WHERE title LIKE ? AND title_type IN ("Fernsehserie", "Miniserie") ORDER BY title ASC LIMIT ? OFFSET ?');
+    $stmt = $pdo->prepare($sqlBase . ' AND m.title LIKE ? ORDER BY m.title ASC LIMIT ? OFFSET ?');
     $stmt->bindValue(1, "%$q%");
     $stmt->bindValue(2, $perPage, PDO::PARAM_INT);
     $stmt->bindValue(3, $offset, PDO::PARAM_INT);
     $stmt->execute();
 } else {
-    $stmt = $pdo->prepare('SELECT * FROM movies WHERE title_type IN ("Fernsehserie", "Miniserie") ORDER BY title ASC LIMIT ? OFFSET ?');
+    $stmt = $pdo->prepare($sqlBase . ' ORDER BY m.title ASC LIMIT ? OFFSET ?');
     $stmt->bindValue(1, $perPage, PDO::PARAM_INT);
     $stmt->bindValue(2, $offset, PDO::PARAM_INT);
     $stmt->execute();
@@ -70,6 +90,8 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                         <th>Ich</th>
                         <th>Laufzeit</th>
                         <th>Genres</th>
+                        <th>Staffeln</th>
+                        <th>Episoden</th>
                         <th>Type</th>
                     </tr>
                 </thead>
@@ -101,6 +123,8 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                 <td><?php echo $s['your_rating'] !== null ? h($s['your_rating']) : ''; ?></td>
                                 <td><?php echo $s['runtime_mins'] !== null ? h($s['runtime_mins']) . ' min' : ''; ?></td>
                                 <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['genres']); ?></td>
+                                <td><?php echo isset($s['season_count']) ? h($s['season_count']) : '0'; ?></td>
+                                <td><?php echo isset($s['episode_count']) ? h($s['episode_count']) : '0'; ?></td>
                                 <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['title_type']); ?></td>
                             </tr>
                         <?php endforeach; ?>

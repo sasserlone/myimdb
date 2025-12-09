@@ -29,8 +29,18 @@ if ($const !== '') {
     $stmtCount->execute([$const]);
     $total = (int)$stmtCount->fetchColumn();
 
-    // Episoden laden
-    $stmtEp = $pdo->prepare('SELECT * FROM episodes WHERE parent_tconst = ? ORDER BY COALESCE(season_number, 0) ASC, COALESCE(episode_number, 0) ASC LIMIT ? OFFSET ?');
+    // Episoden laden (mit Episode-Details aus `movies`)
+    $sql = '
+        SELECT ep.*, mv.title AS episode_title, mv.year AS episode_year, mv.imdb_rating AS episode_imdb_rating,
+               mv.num_votes AS episode_num_votes, mv.your_rating AS episode_your_rating, mv.runtime_mins AS episode_runtime_mins,
+               mv.genres AS episode_genres, mv.url AS episode_url
+        FROM episodes ep
+        LEFT JOIN movies mv ON mv.`const` = ep.tconst
+        WHERE ep.parent_tconst = ?
+        ORDER BY COALESCE(ep.season_number, 0) ASC, COALESCE(ep.episode_number, 0) ASC
+        LIMIT ? OFFSET ?
+    ';
+    $stmtEp = $pdo->prepare($sql);
     $stmtEp->bindValue(1, $const);
     $stmtEp->bindValue(2, $perPage, PDO::PARAM_INT);
     $stmtEp->bindValue(3, $offset, PDO::PARAM_INT);
@@ -56,12 +66,42 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
         <?php else: ?>
             <p class="text-muted">Episoden für: <?php echo $seriesInfo ? h($seriesInfo['title']) : h($const); ?> (<?php echo number_format($total, 0, ',', '.'); ?>)</p>
 
+            <!-- Serien-Übersicht: gleiche Reihenfolge wie in series.php -->
+            <?php if ($seriesInfo): ?>
+                <div class="card mb-3">
+                    <div class="card-body p-2">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Titel:</strong> <?php echo h($seriesInfo['title']); ?><br>
+                                <strong>Jahr:</strong> <?php echo $seriesInfo['year'] !== null ? h($seriesInfo['year']) : ''; ?><br>
+                                <strong>IMDb:</strong>
+                                <?php if ($seriesInfo['imdb_rating'] !== null) {
+                                    echo h($seriesInfo['imdb_rating']);
+                                    if (!empty($seriesInfo['num_votes'])) echo ' (' . h($seriesInfo['num_votes']) . ')';
+                                } ?><br>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Ich:</strong> <?php echo $seriesInfo['your_rating'] !== null ? h($seriesInfo['your_rating']) : ''; ?><br>
+                                <strong>Laufzeit:</strong> <?php echo $seriesInfo['runtime_mins'] !== null ? h($seriesInfo['runtime_mins']) . ' min' : ''; ?><br>
+                                <strong>Genres:</strong> <?php echo h($seriesInfo['genres']); ?><br>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <div class="table-responsive">
                 <table class="table table-striped table-hover">
                     <thead class="table-light">
                         <tr>
                             <th>#</th>
                             <th>tconst</th>
+                            <th>Titel</th>
+                            <th>Jahr</th>
+                            <th>IMDb</th>
+                            <th>Ich</th>
+                            <th>Laufzeit</th>
+                            <th>Genres</th>
                             <th>Season</th>
                             <th>Episode</th>
                             <th>Link</th>
@@ -69,12 +109,24 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                     </thead>
                     <tbody>
                         <?php if (empty($episodes)): ?>
-                            <tr><td colspan="5" class="text-center">Keine Episoden gefunden.</td></tr>
+                            <tr><td colspan="11" class="text-center">Keine Episoden gefunden.</td></tr>
                         <?php else: ?>
                             <?php foreach ($episodes as $i => $ep): ?>
                                 <tr>
                                     <td><?php echo h($offset + $i + 1); ?></td>
                                     <td><?php echo h($ep['tconst']); ?></td>
+                                    <td style="max-width:360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        <?php if (!empty($ep['episode_url'])): ?>
+                                            <a href="<?php echo h($ep['episode_url']); ?>" target="_blank" rel="noopener noreferrer"><?php echo h($ep['episode_title'] ?? $ep['tconst']); ?></a>
+                                        <?php else: ?>
+                                            <?php echo h($ep['episode_title'] ?? $ep['tconst']); ?>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?php echo isset($ep['episode_year']) ? h($ep['episode_year']) : ''; ?></td>
+                                    <td><?php echo $ep['episode_imdb_rating'] !== null ? h($ep['episode_imdb_rating']) . (!empty($ep['episode_num_votes']) ? ' (' . h($ep['episode_num_votes']) . ')' : '') : ''; ?></td>
+                                    <td><?php echo isset($ep['episode_your_rating']) && $ep['episode_your_rating'] !== null ? h($ep['episode_your_rating']) : ''; ?></td>
+                                    <td><?php echo isset($ep['episode_runtime_mins']) && $ep['episode_runtime_mins'] !== null ? h($ep['episode_runtime_mins']) . ' min' : ''; ?></td>
+                                    <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo isset($ep['episode_genres']) ? h($ep['episode_genres']) : ''; ?></td>
                                     <td><?php echo $ep['season_number'] !== null ? h($ep['season_number']) : '-'; ?></td>
                                     <td><?php echo $ep['episode_number'] !== null ? h($ep['episode_number']) : '-'; ?></td>
                                     <td>

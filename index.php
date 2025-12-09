@@ -61,7 +61,7 @@ header('Content-Type: text/html; charset=utf-8');
                     
                 </ul>
                 <div class="d-flex">
-                    <button id="toggle-mode" class="btn btn-outline-secondary btn-sm ms-2" title="Dark/Light Mode">🌙</button>
+                    <button id="toggle-mode" class="btn btn-outline-secondary btn-sm ms-2" title="Dark/Light Mode" aria-label="Theme wechseln"><span class="toggle-icon"></span></button>
                 </div>
             </div>
 
@@ -74,5 +74,54 @@ header('Content-Type: text/html; charset=utf-8');
             loadModule($mod);
         ?>
     </div>
- </body>
+        <!-- Floating theme toggle (optional) -->
+        <button id="themeToggle" class="theme-toggle" aria-label="Theme wechseln"><span class="toggle-icon"></span></button>
+
+        <script>
+        (function(){
+            const key = 'movies-theme';
+            const navBtn = document.getElementById('toggle-mode');
+            const floatBtn = document.getElementById('themeToggle');
+            const iconTpl = {
+                sun: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="M4.93 4.93l1.41 1.41"></path><path d="M17.66 17.66l1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="M4.93 19.07l1.41-1.41"></path><path d="M17.66 6.34l1.41-1.41"></path></svg>',
+                moon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path></svg>'
+            };
+
+            let theme = localStorage.getItem(key);
+            if(!theme) {
+                theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+
+            function setIconFor(el, t){
+                if(!el) return;
+                el.innerHTML = (t === 'dark') ? iconTpl.sun : iconTpl.moon;
+            }
+
+            function applyTheme(t){
+                if(t === 'dark'){
+                    document.body.classList.add('theme-dark');
+                    document.body.classList.remove('theme-light');
+                } else {
+                    document.body.classList.remove('theme-dark');
+                    document.body.classList.add('theme-light');
+                }
+                setIconFor(navBtn ? navBtn.querySelector('.toggle-icon') : null, t);
+                setIconFor(floatBtn ? floatBtn.querySelector('.toggle-icon') : null, t);
+            }
+
+            applyTheme(theme);
+
+            function toggleAndStore(){
+                theme = (theme === 'dark') ? 'light' : 'dark';
+                localStorage.setItem(key, theme);
+                applyTheme(theme);
+            }
+
+            if(navBtn){ navBtn.addEventListener('click', toggleAndStore); }
+            if(floatBtn){ floatBtn.addEventListener('click', toggleAndStore); }
+        })();
+        </script>
+</body>
+</html>
+</body>
 </html>

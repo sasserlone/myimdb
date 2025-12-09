@@ -113,13 +113,13 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo h($s['year']); ?></td>
-                                <td class="text-end"><?php echo $s['imdb_rating'] !== null ? h($s['imdb_rating']) : ''; ?></td>
-                                <td class="text-end"><?php echo ($s['num_votes'] !== null && $s['num_votes'] !== '') ? h(number_format((int)$s['num_votes'], 0, ',', '.')) : ''; ?></td>
-                                <td class="text-end"><?php echo $s['your_rating'] !== null ? h($s['your_rating']) : ''; ?></td>
-                                <td class="text-end"><?php echo $s['runtime_mins'] !== null ? h($s['runtime_mins']) . ' min' : ''; ?></td>
+                                <td class="text-end numeric"><?php echo $s['imdb_rating'] !== null ? h($s['imdb_rating']) : ''; ?></td>
+                                <td class="text-end numeric"><?php echo ($s['num_votes'] !== null && $s['num_votes'] !== '') ? h(number_format((int)$s['num_votes'], 0, ',', '.')) : ''; ?></td>
+                                <td class="text-end numeric"><?php echo $s['your_rating'] !== null ? h($s['your_rating']) : ''; ?></td>
+                                <td class="text-end numeric"><?php echo $s['runtime_mins'] !== null ? h($s['runtime_mins']) . ' min' : ''; ?></td>
                                 <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['genres']); ?></td>
-                                <td class="text-end"><?php echo isset($s['season_count']) ? h($s['season_count']) : '0'; ?></td>
-                                <td class="text-end"><?php echo isset($s['episode_count']) ? h($s['episode_count']) : '0'; ?></td>
+                                <td class="text-end numeric"><?php echo isset($s['season_count']) ? h($s['season_count']) : '0'; ?></td>
+                                <td class="text-end numeric"><?php echo isset($s['episode_count']) ? h($s['episode_count']) : '0'; ?></td>
                                 <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['title_type']); ?></td>
                                 <td>
                                     <a class="btn btn-sm btn-outline-primary" href="<?php echo '?mod=serie&const=' . urlencode($s['const']); ?>">Episoden</a>

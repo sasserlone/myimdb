@@ -140,3 +140,125 @@
     color: #1565c0;
     margin-top: 20px;
 }
+
+/* -----------------------------
+   Global UI / Theme (Tag & Nacht)
+   - CSS-Variablen für Light/Dark
+   - einfache Umschalt-Klassen: .theme-light / .theme-dark
+   - optimierte Table/Card/Button Styles
+   ----------------------------- */
+
+:root {
+    --bg: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --card-bg: #ffffff;
+    --accent: #667eea;
+    --accent-contrast: #ffffff;
+    --table-border: rgba(15,23,42,0.06);
+    --header-bg: #f8fafc;
+    --table-head-bg: #f1f5f9;
+    --table-row-hover: rgba(102,126,234,0.04);
+    --box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+}
+
+.theme-dark {
+    --bg: #071025;
+    --text: #e6eef8;
+    --muted: #90a4b6;
+    --card-bg: #0b1220;
+    --accent: #8ab4ff;
+    --accent-contrast: #071025;
+    --table-border: rgba(255,255,255,0.04);
+    --header-bg: #071428;
+    --table-head-bg: #071428;
+    --table-row-hover: rgba(138,180,255,0.03);
+    --box-shadow: 0 8px 24px rgba(2,6,23,0.6);
+}
+
+/* Grundlayout */
+body {
+    background: var(--bg);
+    color: var(--text);
+    transition: background .25s ease, color .25s ease;
+}
+
+/* Karten / Panels */
+.card {
+    background: var(--card-bg);
+    border: 1px solid rgba(0,0,0,0.04);
+    box-shadow: var(--box-shadow);
+}
+
+/* Tabellen */
+.table thead th {
+    background: var(--table-head-bg) !important;
+    color: var(--text);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.table.table-hover tbody tr:hover {
+    background: var(--table-row-hover);
+}
+
+/* Subtle outer border for tables with rounded corners */
+.table {
+    border: 1px solid var(--table-border);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+/* Buttons / Links */
+a, .btn-outline-primary {
+    color: var(--accent) !important;
+}
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, #6b4bd6 100%);
+    border-color: transparent;
+}
+
+/* Numeric helper: use tabular numbers for better alignment */
+.numeric {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Theme toggle floating button (nur Styles) */
+.theme-toggle {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 9999;
+    background: var(--card-bg);
+    color: var(--text);
+    border: 1px solid rgba(0,0,0,0.06);
+    padding: 8px 10px;
+    border-radius: 999px;
+    box-shadow: var(--box-shadow);
+    cursor: pointer;
+    transition: transform .12s ease, background .2s ease, color .2s ease;
+}
+.theme-toggle:active { transform: scale(.98); }
+
+/* Preferenziell nativer Dark Mode wird durch `.theme-dark` unterstützt;
+   optional kann per JS die Klasse `theme-dark` auf `body` gesetzt werden. */
+
+/* Kleine Utility-Anpassungen */
+.muted { color: var(--muted); }
+.table td, .table th { vertical-align: middle; }
+
+/* Pagination: ensure readable active state (avoid blue-on-blue) */
+.pagination .page-link {
+    color: var(--text);
+    border-radius: .375rem;
+}
+.pagination .page-item.active .page-link {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: var(--accent-contrast) !important;
+    box-shadow: none;
+}
+.pagination .page-link:hover {
+    color: var(--accent);
+}
+
+/* Ende Theme */
+

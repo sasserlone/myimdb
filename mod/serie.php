@@ -76,8 +76,8 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                                 <strong>Jahr:</strong> <?php echo $seriesInfo['year'] !== null ? h($seriesInfo['year']) : ''; ?><br>
                                 <strong>IMDb:</strong>
                                 <?php if ($seriesInfo['imdb_rating'] !== null) {
-                                    echo h($seriesInfo['imdb_rating']);
-                                    if (!empty($seriesInfo['num_votes'])) echo ' (' . h(number_format((int)$seriesInfo['num_votes'], 0, ',', '.')) . ')';
+                                    echo '<span class="numeric">' . h($seriesInfo['imdb_rating']) . '</span>';
+                                    if (!empty($seriesInfo['num_votes'])) echo ' (' . '<span class="numeric">' . h(number_format((int)$seriesInfo['num_votes'], 0, ',', '.')) . '</span>' . ')';
                                 } ?><br>
                             </div>
                             <div class="col-md-6">
@@ -124,13 +124,13 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                                         <?php endif; ?>
                                     </td>
                                     <td><?php echo isset($ep['episode_year']) ? h($ep['episode_year']) : ''; ?></td>
-                                    <td class="text-end"><?php echo isset($ep['episode_imdb_rating']) && $ep['episode_imdb_rating'] !== null ? h($ep['episode_imdb_rating']) : ''; ?></td>
-                                    <td class="text-end"><?php echo (isset($ep['episode_num_votes']) && $ep['episode_num_votes'] !== null && $ep['episode_num_votes'] !== '') ? h(number_format((int)$ep['episode_num_votes'], 0, ',', '.')) : ''; ?></td>
-                                    <td class="text-end"><?php echo isset($ep['episode_your_rating']) && $ep['episode_your_rating'] !== null ? h($ep['episode_your_rating']) : ''; ?></td>
-                                    <td class="text-end"><?php echo isset($ep['episode_runtime_mins']) && $ep['episode_runtime_mins'] !== null ? h($ep['episode_runtime_mins']) . ' min' : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo isset($ep['episode_imdb_rating']) && $ep['episode_imdb_rating'] !== null ? h($ep['episode_imdb_rating']) : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo (isset($ep['episode_num_votes']) && $ep['episode_num_votes'] !== null && $ep['episode_num_votes'] !== '') ? h(number_format((int)$ep['episode_num_votes'], 0, ',', '.')) : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo isset($ep['episode_your_rating']) && $ep['episode_your_rating'] !== null ? h($ep['episode_your_rating']) : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo isset($ep['episode_runtime_mins']) && $ep['episode_runtime_mins'] !== null ? h($ep['episode_runtime_mins']) . ' min' : ''; ?></td>
                                     <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo isset($ep['episode_genres']) ? h($ep['episode_genres']) : ''; ?></td>
-                                    <td class="text-end"><?php echo $ep['season_number'] !== null ? h($ep['season_number']) : '-'; ?></td>
-                                    <td class="text-end"><?php echo $ep['episode_number'] !== null ? h($ep['episode_number']) : '-'; ?></td>
+                                    <td class="text-end numeric"><?php echo $ep['season_number'] !== null ? h($ep['season_number']) : '-'; ?></td>
+                                    <td class="text-end numeric"><?php echo $ep['episode_number'] !== null ? h($ep['episode_number']) : '-'; ?></td>
                                     <td>
                                         <a class="btn btn-sm btn-outline-primary" href="https://www.imdb.com/title/<?php echo h($ep['tconst']); ?>/" target="_blank" rel="noopener noreferrer">IMDb</a>
                                     </td>

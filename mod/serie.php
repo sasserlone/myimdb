@@ -77,7 +77,7 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                                 <strong>IMDb:</strong>
                                 <?php if ($seriesInfo['imdb_rating'] !== null) {
                                     echo h($seriesInfo['imdb_rating']);
-                                    if (!empty($seriesInfo['num_votes'])) echo ' (' . h($seriesInfo['num_votes']) . ')';
+                                    if (!empty($seriesInfo['num_votes'])) echo ' (' . h(number_format((int)$seriesInfo['num_votes'], 0, ',', '.')) . ')';
                                 } ?><br>
                             </div>
                             <div class="col-md-6">
@@ -98,13 +98,13 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                             <th>tconst</th>
                             <th>Titel</th>
                             <th>Jahr</th>
-                            <th>IMDb</th>
-                            <th>Votes</th>
-                            <th>Ich</th>
-                            <th>Laufzeit</th>
+                            <th class="text-end">IMDb</th>
+                            <th class="text-end">Votes</th>
+                            <th class="text-end">MyRate</th>
+                            <th class="text-end">Laufzeit</th>
                             <th>Genres</th>
-                            <th>Season</th>
-                            <th>Episode</th>
+                            <th class="text-end">Season</th>
+                            <th class="text-end">Episode</th>
                             <th>Link</th>
                         </tr>
                     </thead>
@@ -124,13 +124,13 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                                         <?php endif; ?>
                                     </td>
                                     <td><?php echo isset($ep['episode_year']) ? h($ep['episode_year']) : ''; ?></td>
-                                    <td><?php echo isset($ep['episode_imdb_rating']) && $ep['episode_imdb_rating'] !== null ? h($ep['episode_imdb_rating']) : ''; ?></td>
-                                    <td><?php echo isset($ep['episode_num_votes']) && $ep['episode_num_votes'] !== null ? h($ep['episode_num_votes']) : ''; ?></td>
-                                    <td><?php echo isset($ep['episode_your_rating']) && $ep['episode_your_rating'] !== null ? h($ep['episode_your_rating']) : ''; ?></td>
-                                    <td><?php echo isset($ep['episode_runtime_mins']) && $ep['episode_runtime_mins'] !== null ? h($ep['episode_runtime_mins']) . ' min' : ''; ?></td>
+                                    <td class="text-end"><?php echo isset($ep['episode_imdb_rating']) && $ep['episode_imdb_rating'] !== null ? h($ep['episode_imdb_rating']) : ''; ?></td>
+                                    <td class="text-end"><?php echo (isset($ep['episode_num_votes']) && $ep['episode_num_votes'] !== null && $ep['episode_num_votes'] !== '') ? h(number_format((int)$ep['episode_num_votes'], 0, ',', '.')) : ''; ?></td>
+                                    <td class="text-end"><?php echo isset($ep['episode_your_rating']) && $ep['episode_your_rating'] !== null ? h($ep['episode_your_rating']) : ''; ?></td>
+                                    <td class="text-end"><?php echo isset($ep['episode_runtime_mins']) && $ep['episode_runtime_mins'] !== null ? h($ep['episode_runtime_mins']) . ' min' : ''; ?></td>
                                     <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo isset($ep['episode_genres']) ? h($ep['episode_genres']) : ''; ?></td>
-                                    <td><?php echo $ep['season_number'] !== null ? h($ep['season_number']) : '-'; ?></td>
-                                    <td><?php echo $ep['episode_number'] !== null ? h($ep['episode_number']) : '-'; ?></td>
+                                    <td class="text-end"><?php echo $ep['season_number'] !== null ? h($ep['season_number']) : '-'; ?></td>
+                                    <td class="text-end"><?php echo $ep['episode_number'] !== null ? h($ep['episode_number']) : '-'; ?></td>
                                     <td>
                                         <a class="btn btn-sm btn-outline-primary" href="https://www.imdb.com/title/<?php echo h($ep['tconst']); ?>/" target="_blank" rel="noopener noreferrer">IMDb</a>
                                     </td>

@@ -86,13 +86,13 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                         <th>Const</th>
                         <th>Titel</th>
                         <th>Jahr</th>
-                        <th>IMDb</th>
-                        <th>Votes</th>
-                        <th>Ich</th>
-                        <th>Laufzeit</th>
+                        <th class="text-end">IMDb</th>
+                        <th class="text-end">Votes</th>
+                        <th class="text-end">MyRate</th>
+                        <th class="text-end">Laufzeit</th>
                         <th>Genres</th>
-                        <th>Staffeln</th>
-                        <th>Episoden</th>
+                        <th class="text-end">Staffeln</th>
+                        <th class="text-end">Episoden</th>
                         <th>Type</th>
                         <th>Aktion</th>
                     </tr>
@@ -113,13 +113,13 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo h($s['year']); ?></td>
-                                <td><?php echo $s['imdb_rating'] !== null ? h($s['imdb_rating']) : ''; ?></td>
-                                <td><?php echo $s['num_votes'] !== null ? h($s['num_votes']) : ''; ?></td>
-                                <td><?php echo $s['your_rating'] !== null ? h($s['your_rating']) : ''; ?></td>
-                                <td><?php echo $s['runtime_mins'] !== null ? h($s['runtime_mins']) . ' min' : ''; ?></td>
+                                <td class="text-end"><?php echo $s['imdb_rating'] !== null ? h($s['imdb_rating']) : ''; ?></td>
+                                <td class="text-end"><?php echo ($s['num_votes'] !== null && $s['num_votes'] !== '') ? h(number_format((int)$s['num_votes'], 0, ',', '.')) : ''; ?></td>
+                                <td class="text-end"><?php echo $s['your_rating'] !== null ? h($s['your_rating']) : ''; ?></td>
+                                <td class="text-end"><?php echo $s['runtime_mins'] !== null ? h($s['runtime_mins']) . ' min' : ''; ?></td>
                                 <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['genres']); ?></td>
-                                <td><?php echo isset($s['season_count']) ? h($s['season_count']) : '0'; ?></td>
-                                <td><?php echo isset($s['episode_count']) ? h($s['episode_count']) : '0'; ?></td>
+                                <td class="text-end"><?php echo isset($s['season_count']) ? h($s['season_count']) : '0'; ?></td>
+                                <td class="text-end"><?php echo isset($s['episode_count']) ? h($s['episode_count']) : '0'; ?></td>
                                 <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['title_type']); ?></td>
                                 <td>
                                     <a class="btn btn-sm btn-outline-primary" href="<?php echo '?mod=serie&const=' . urlencode($s['const']); ?>">Episoden</a>

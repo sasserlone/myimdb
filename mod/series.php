@@ -87,6 +87,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                         <th>Titel</th>
                         <th>Jahr</th>
                         <th>IMDb</th>
+                        <th>Votes</th>
                         <th>Ich</th>
                         <th>Laufzeit</th>
                         <th>Genres</th>
@@ -112,15 +113,8 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo h($s['year']); ?></td>
-                                <td>
-                                    <?php 
-                                    if ($s['imdb_rating'] !== null) {
-                                        $rating = h($s['imdb_rating']);
-                                        $votes = !empty($s['num_votes']) ? ' (' . h($s['num_votes']) . ')' : '';
-                                        echo $rating . $votes;
-                                    }
-                                    ?>
-                                </td>
+                                <td><?php echo $s['imdb_rating'] !== null ? h($s['imdb_rating']) : ''; ?></td>
+                                <td><?php echo $s['num_votes'] !== null ? h($s['num_votes']) : ''; ?></td>
                                 <td><?php echo $s['your_rating'] !== null ? h($s['your_rating']) : ''; ?></td>
                                 <td><?php echo $s['runtime_mins'] !== null ? h($s['runtime_mins']) . ' min' : ''; ?></td>
                                 <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['genres']); ?></td>

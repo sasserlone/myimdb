@@ -99,6 +99,7 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                             <th>Titel</th>
                             <th>Jahr</th>
                             <th>IMDb</th>
+                            <th>Votes</th>
                             <th>Ich</th>
                             <th>Laufzeit</th>
                             <th>Genres</th>
@@ -123,7 +124,8 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                                         <?php endif; ?>
                                     </td>
                                     <td><?php echo isset($ep['episode_year']) ? h($ep['episode_year']) : ''; ?></td>
-                                    <td><?php echo $ep['episode_imdb_rating'] !== null ? h($ep['episode_imdb_rating']) . (!empty($ep['episode_num_votes']) ? ' (' . h($ep['episode_num_votes']) . ')' : '') : ''; ?></td>
+                                    <td><?php echo isset($ep['episode_imdb_rating']) && $ep['episode_imdb_rating'] !== null ? h($ep['episode_imdb_rating']) : ''; ?></td>
+                                    <td><?php echo isset($ep['episode_num_votes']) && $ep['episode_num_votes'] !== null ? h($ep['episode_num_votes']) : ''; ?></td>
                                     <td><?php echo isset($ep['episode_your_rating']) && $ep['episode_your_rating'] !== null ? h($ep['episode_your_rating']) : ''; ?></td>
                                     <td><?php echo isset($ep['episode_runtime_mins']) && $ep['episode_runtime_mins'] !== null ? h($ep['episode_runtime_mins']) . ' min' : ''; ?></td>
                                     <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo isset($ep['episode_genres']) ? h($ep['episode_genres']) : ''; ?></td>

@@ -93,11 +93,12 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                         <th>Staffeln</th>
                         <th>Episoden</th>
                         <th>Type</th>
+                        <th>Aktion</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($series)): ?>
-                        <tr><td colspan="9" class="text-center">Keine Serien gefunden.</td></tr>
+                        <tr><td colspan="12" class="text-center">Keine Serien gefunden.</td></tr>
                     <?php else: ?>
                         <?php foreach ($series as $i => $s): ?>
                             <tr>
@@ -126,6 +127,9 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                 <td><?php echo isset($s['season_count']) ? h($s['season_count']) : '0'; ?></td>
                                 <td><?php echo isset($s['episode_count']) ? h($s['episode_count']) : '0'; ?></td>
                                 <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['title_type']); ?></td>
+                                <td>
+                                    <a class="btn btn-sm btn-outline-primary" href="<?php echo '?mod=serie&const=' . urlencode($s['const']); ?>">Episoden</a>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

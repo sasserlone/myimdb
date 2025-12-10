@@ -99,19 +99,13 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 </thead>
                 <tbody>
                     <?php if (empty($series)): ?>
-                        <tr><td colspan="12" class="text-center">Keine Serien gefunden.</td></tr>
+                        <tr><td colspan="13" class="text-center">Keine Serien gefunden.</td></tr>
                     <?php else: ?>
                         <?php foreach ($series as $i => $s): ?>
                             <tr>
                                 <td><?php echo h($offset + $i + 1); ?></td>
                                 <td><?php echo h($s['const']); ?></td>
-                                <td>
-                                    <?php if (!empty($s['url'])): ?>
-                                        <a href="<?php echo h($s['url']); ?>" target="_blank" rel="noopener noreferrer"><?php echo h($s['title']); ?></a>
-                                    <?php else: ?>
-                                        <?php echo h($s['title']); ?>
-                                    <?php endif; ?>
-                                </td>
+                                <td><?php echo h($s['title']); ?></td>
                                 <td><?php echo h($s['year']); ?></td>
                                 <td class="text-end numeric"><?php echo $s['imdb_rating'] !== null ? h($s['imdb_rating']) : ''; ?></td>
                                 <td class="text-end numeric"><?php echo ($s['num_votes'] !== null && $s['num_votes'] !== '') ? h(number_format((int)$s['num_votes'], 0, ',', '.')) : ''; ?></td>
@@ -123,6 +117,11 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                 <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['title_type']); ?></td>
                                 <td>
                                     <a class="btn btn-sm btn-outline-primary" href="<?php echo '?mod=serie&const=' . urlencode($s['const']); ?>">Episoden</a>
+                                    <?php if (!empty($s['url'])): ?>
+                                        <a class="btn btn-sm btn-outline-primary" href="<?php echo h($s['url']); ?>" target="_blank" rel="noopener noreferrer">IMDb</a>
+                                    <?php else: ?>
+                                        <span class="text-muted">—</span>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

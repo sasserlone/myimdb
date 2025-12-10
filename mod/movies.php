@@ -71,23 +71,18 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                         <th class="text-end">Laufzeit</th>
                         <th>Genres</th>
                         <th>Type</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($movies)): ?>
-                        <tr><td colspan="9" class="text-center">Keine Filme gefunden.</td></tr>
+                        <tr><td colspan="10" class="text-center">Keine Filme gefunden.</td></tr>
                     <?php else: ?>
                         <?php foreach ($movies as $i => $m): ?>
                             <tr>
                                 <td><?php echo h($offset + $i + 1); ?></td>
                                 <td><?php echo h($m['const']); ?></td>
-                                <td>
-                                    <?php if (!empty($m['url'])): ?>
-                                        <a href="<?php echo h($m['url']); ?>" target="_blank" rel="noopener noreferrer"><?php echo h($m['title']); ?></a>
-                                    <?php else: ?>
-                                        <?php echo h($m['title']); ?>
-                                    <?php endif; ?>
-                                </td>
+                                <td><?php echo h($m['title']); ?></td>
                                 <td><?php echo h($m['year']); ?></td>
                                 <td class="text-end numeric"><?php echo $m['imdb_rating'] !== null ? h($m['imdb_rating']) : ''; ?></td>
                                 <td class="text-end numeric"><?php echo ($m['num_votes'] !== null && $m['num_votes'] !== '') ? h(number_format((int)$m['num_votes'], 0, ',', '.')) : ''; ?></td>
@@ -95,6 +90,13 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                 <td class="text-end numeric"><?php echo $m['runtime_mins'] !== null ? h($m['runtime_mins']) . ' min' : ''; ?></td>
                                 <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['genres']); ?></td>
                                 <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['title_type']); ?></td>
+                                <td>
+                                    <?php if (!empty($m['url'])): ?>
+                                        <a class="btn btn-sm btn-outline-primary" href="<?php echo h($m['url']); ?>" target="_blank" rel="noopener noreferrer">IMDb</a>
+                                    <?php else: ?>
+                                        <span class="text-muted">—</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

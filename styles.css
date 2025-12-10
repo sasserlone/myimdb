@@ -180,6 +180,7 @@
 body {
     background: var(--bg);
     color: var(--text);
+    font-size: 0.8em;
     transition: background .25s ease, color .25s ease;
 }
 
@@ -205,11 +206,17 @@ body {
     border: 1px solid var(--table-border);
     border-radius: 0.5rem;
     overflow: hidden;
+    line-height: 1.5 !important;
 }
 
 /* Buttons / Links */
 a, .btn-outline-primary {
     color: var(--accent) !important;
+}
+.btn-outline-primary:hover {
+    background-color: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: var(--accent-contrast) !important;
 }
 .btn-primary {
     background: linear-gradient(135deg, var(--accent) 0%, #6b4bd6 100%);
@@ -243,7 +250,17 @@ a, .btn-outline-primary {
 
 /* Kleine Utility-Anpassungen */
 .muted { color: var(--muted); }
-.table td, .table th { vertical-align: middle; }
+.table td, .table th { 
+    vertical-align: middle; 
+    line-height: 1.5 !important; 
+}
+
+/* Buttons in Tabellen: kompaktere Höhe */
+.table .btn {
+    padding: 0.25rem 0.25rem !important;
+    font-size: 0.75rem !important;
+    line-height: 0.5 !important;
+}
 
 /* Pagination: ensure readable active state (avoid blue-on-blue) */
 .pagination .page-link {

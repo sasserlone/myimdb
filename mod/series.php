@@ -30,14 +30,72 @@ if (!empty($_GET['q'])) {
     $q = trim($_GET['q']);
 }
 
+// Filter-Parameter
+$filterComplete = isset($_GET['filter_complete']) ? (int)$_GET['filter_complete'] : 0;
+$filterPartial = isset($_GET['filter_partial']) ? (int)$_GET['filter_partial'] : 0;
+$filterNew = isset($_GET['filter_new']) ? (int)$_GET['filter_new'] : 0;
+
+// Reset filter if requested
+if (isset($_GET['filter_reset'])) {
+    $filterComplete = 0;
+    $filterPartial = 0;
+    $filterNew = 0;
+}
+
 $pdo = getConnection();
 
+// Build filter condition based on toggles
+$filterConditions = [];
+if ($filterComplete || $filterPartial || $filterNew) {
+    // Build filter based on episode counts
+    if ($filterComplete) {
+        $filterConditions[] = '(COALESCE(e.episode_count, 0) = COALESCE(em.episode_movies_count, 0) AND COALESCE(e.episode_count, 0) > 0)';
+    }
+    if ($filterPartial) {
+        $filterConditions[] = '(COALESCE(e.episode_count, 0) > 0 AND COALESCE(e.episode_count, 0) > COALESCE(em.episode_movies_count, 0))';
+    }
+    if ($filterNew) {
+        $filterConditions[] = '(COALESCE(e.episode_count, 0) = 0)';
+    }
+}
+
+// Build WHERE clause with filters
+$whereClause = 'm.title_type IN ("Fernsehserie", "Miniserie")';
+if (!empty($filterConditions)) {
+    $whereClause .= ' AND (' . implode(' OR ', $filterConditions) . ')';
+}
+
 // Gesamtanzahl ermitteln (nur Serien und Miniserien)
+$countSql = '
+    SELECT COUNT(DISTINCT m.id) FROM movies m
+    LEFT JOIN (
+        SELECT parent_tconst, COUNT(DISTINCT season_number) AS season_count
+        FROM episodes
+        WHERE parent_tconst IS NOT NULL
+        GROUP BY parent_tconst
+    ) s ON s.parent_tconst = m.const
+    LEFT JOIN (
+        SELECT parent_tconst, COUNT(*) AS episode_count
+        FROM episodes
+        WHERE parent_tconst IS NOT NULL
+        GROUP BY parent_tconst
+    ) e ON e.parent_tconst = m.const
+    LEFT JOIN (
+        SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count
+        FROM episodes ep
+        INNER JOIN movies mov ON mov.const = ep.tconst
+        WHERE ep.parent_tconst IS NOT NULL
+        GROUP BY ep.parent_tconst
+    ) em ON em.parent_tconst = m.const
+    WHERE ' . $whereClause;
+
 if ($q !== '') {
-    $stmtCount = $pdo->prepare('SELECT COUNT(*) FROM movies WHERE title LIKE ? AND title_type IN ("Fernsehserie", "Miniserie")');
+    $countSql .= ' AND m.title LIKE ?';
+    $stmtCount = $pdo->prepare($countSql);
     $stmtCount->execute(["%$q%"]);
 } else {
-    $stmtCount = $pdo->query('SELECT COUNT(*) FROM movies WHERE title_type IN ("Fernsehserie", "Miniserie")');
+    $stmtCount = $pdo->prepare($countSql);
+    $stmtCount->execute();
 }
 $total = (int)$stmtCount->fetchColumn();
 
@@ -69,8 +127,7 @@ $sqlBase = '
         WHERE ep.parent_tconst IS NOT NULL
         GROUP BY ep.parent_tconst
     ) em ON em.parent_tconst = m.const
-    WHERE m.title_type IN ("Fernsehserie", "Miniserie")
-';
+    WHERE ' . $whereClause;
 
 if ($q !== '') {
     $stmt = $pdo->prepare($sqlBase . ' AND m.title LIKE ? ORDER BY m.title ASC LIMIT ? OFFSET ?');
@@ -99,6 +156,26 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 <input type="hidden" name="mod" value="series">
                 <input class="form-control form-control-sm" type="search" name="q" placeholder="Suche Titel" value="<?php echo h($q); ?>">
                 <button class="btn btn-sm btn-primary ms-2">Suchen</button>
+            </form>
+        </div>
+
+        <!-- Filter Buttons -->
+        <div class="mb-3">
+            <form method="get" class="d-flex gap-2">
+                <input type="hidden" name="mod" value="series">
+                <input type="hidden" name="q" value="<?php echo h($q); ?>">
+                <button type="submit" class="btn btn-sm <?php echo $filterComplete ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_complete" value="<?php echo $filterComplete ? '0' : '1'; ?>">
+                    Vollständig
+                </button>
+                <button type="submit" class="btn btn-sm <?php echo $filterPartial ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_partial" value="<?php echo $filterPartial ? '0' : '1'; ?>">
+                    Aktuell
+                </button>
+                <button type="submit" class="btn btn-sm <?php echo $filterNew ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_new" value="<?php echo $filterNew ? '0' : '1'; ?>">
+                    Neu
+                </button>
+                <?php if ($filterComplete || $filterPartial || $filterNew): ?>
+                    <button type="submit" class="btn btn-sm btn-outline-secondary" name="filter_reset" value="1">Reset</button>
+                <?php endif; ?>
             </form>
         </div>
 
@@ -168,6 +245,9 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 <?php
                 $baseUrl = '?mod=series';
                 if ($q !== '') $baseUrl .= '&q=' . urlencode($q);
+                if ($filterComplete) $baseUrl .= '&filter_complete=1';
+                if ($filterPartial) $baseUrl .= '&filter_partial=1';
+                if ($filterNew) $baseUrl .= '&filter_new=1';
                 
                 // Previous-Link
                 if ($page > 1):

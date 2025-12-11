@@ -31,7 +31,8 @@ $pages = max(1, (int)ceil($total / $perPage));
 $sqlBase = '
     SELECT m.*, 
            COALESCE(s.season_count, 0) AS season_count, 
-           COALESCE(e.episode_count, 0) AS episode_count
+           COALESCE(e.episode_count, 0) AS episode_count,
+           COALESCE(em.episode_movies_count, 0) AS episode_movies_count
     FROM movies m
     LEFT JOIN (
         SELECT parent_tconst, COUNT(DISTINCT season_number) AS season_count
@@ -45,6 +46,13 @@ $sqlBase = '
         WHERE parent_tconst IS NOT NULL
         GROUP BY parent_tconst
     ) e ON e.parent_tconst = m.const
+    LEFT JOIN (
+        SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count
+        FROM episodes ep
+        INNER JOIN movies mov ON mov.const = ep.tconst
+        WHERE ep.parent_tconst IS NOT NULL
+        GROUP BY ep.parent_tconst
+    ) em ON em.parent_tconst = m.const
     WHERE m.title_type IN ("Fernsehserie", "Miniserie")
 ';
 
@@ -113,7 +121,11 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                 <td class="text-end numeric"><?php echo $s['runtime_mins'] !== null ? h($s['runtime_mins']) . ' min' : ''; ?></td>
                                 <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['genres']); ?></td>
                                 <td class="text-end numeric"><?php echo isset($s['season_count']) ? h($s['season_count']) : '0'; ?></td>
-                                <td class="text-end numeric"><?php echo isset($s['episode_count']) ? h($s['episode_count']) : '0'; ?></td>
+                                <td class="text-end numeric"><?php 
+                                    $episodeCount = isset($s['episode_count']) ? (int)$s['episode_count'] : 0;
+                                    $episodeMoviesCount = isset($s['episode_movies_count']) ? (int)$s['episode_movies_count'] : 0;
+                                    echo h($episodeMoviesCount . '/' . $episodeCount);
+                                ?></td>
                                 <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['title_type']); ?></td>
                                 <td>
                                     <a class="btn btn-sm btn-outline-primary" href="<?php echo '?mod=serie&const=' . urlencode($s['const']); ?>">Episoden</a>

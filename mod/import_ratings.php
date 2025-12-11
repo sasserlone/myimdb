@@ -66,9 +66,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                     $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
                     if ($existing) {
-                        // Film existiert bereits: hole ID und verknüpfe trotzdem Genres
+                        // Film existiert bereits: Update der Rating-Spalten
                         $movieId = (int)$existing['id'];
-                        $skipped++;
+                        $stmt = $pdo->prepare(
+                            'UPDATE movies SET imdb_rating = ?, num_votes = ?, your_rating = ? WHERE id = ?'
+                        );
+                        $stmt->execute([
+                            !empty($data['imdb rating']) ? (float)$data['imdb rating'] : null,
+                            !empty($data['num votes']) ? (int)str_replace(',', '', $data['num votes']) : null,
+                            !empty($data['your rating']) ? (int)$data['your rating'] : null,
+                            $movieId
+                        ]);
+                        $imported++;
                     } else {
                         // Film in Datenbank einfügen
                         $stmt = $pdo->prepare(

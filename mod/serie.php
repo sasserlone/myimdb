@@ -5,6 +5,22 @@ $const = isset($_GET['const']) ? trim($_GET['const']) : '';
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
+$pdo = getConnection();
+
+// Handle delete request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_episode_id'])) {
+    $episodeId = (int)$_POST['delete_episode_id'];
+    try {
+        $stmt = $pdo->prepare('DELETE FROM episodes WHERE id = ?');
+        $stmt->execute([$episodeId]);
+        // Redirect to avoid form resubmission
+        header('Location: ?mod=serie&const=' . urlencode($const) . '&page=' . (isset($_GET['page']) ? (int)$_GET['page'] : 1));
+        exit;
+    } catch (Exception $e) {
+        $deleteError = 'Fehler beim Löschen: ' . $e->getMessage();
+    }
+}
+
 // Pagination
 $perPage = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 50;
 if ($perPage <= 0) $perPage = 50;
@@ -117,11 +133,7 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                                     <td><?php echo h($offset + $i + 1); ?></td>
                                     <td><?php echo h($ep['tconst']); ?></td>
                                     <td style="max-width:360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                        <?php if (!empty($ep['episode_url'])): ?>
-                                            <a href="<?php echo h($ep['episode_url']); ?>" target="_blank" rel="noopener noreferrer"><?php echo h($ep['episode_title'] ?? $ep['tconst']); ?></a>
-                                        <?php else: ?>
-                                            <?php echo h($ep['episode_title'] ?? $ep['tconst']); ?>
-                                        <?php endif; ?>
+                                        <?php echo h($ep['episode_title'] ?? $ep['tconst']); ?>
                                     </td>
                                     <td><?php echo isset($ep['episode_year']) ? h($ep['episode_year']) : ''; ?></td>
                                     <td class="text-end numeric"><?php echo isset($ep['episode_imdb_rating']) && $ep['episode_imdb_rating'] !== null ? h($ep['episode_imdb_rating']) : ''; ?></td>
@@ -133,6 +145,10 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                                     <td class="text-end numeric"><?php echo $ep['episode_number'] !== null ? h($ep['episode_number']) : '-'; ?></td>
                                     <td>
                                         <a class="btn btn-sm btn-outline-primary" href="https://www.imdb.com/title/<?php echo h($ep['tconst']); ?>/" target="_blank" rel="noopener noreferrer">IMDb</a>
+                                        <form method="post" style="display:inline;">
+                                            <input type="hidden" name="delete_episode_id" value="<?php echo $ep['id']; ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Wirklich löschen?');">Löschen</button>
+                                        </form>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

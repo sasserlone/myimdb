@@ -49,20 +49,30 @@ $filterConditions = [];
 if ($filterComplete || $filterPartial || $filterNew) {
     // Build filter based on episode counts
     if ($filterComplete) {
-        $filterConditions[] = '(COALESCE(e.episode_count, 0) = COALESCE(em.episode_movies_count, 0) AND COALESCE(e.episode_count, 0) > 0)';
+        // Vollständig: alle Episoden sind als Filme vorhanden
+        $filterConditions[] = '(e.episode_count IS NOT NULL AND e.episode_count > 0 AND em.episode_movies_count IS NOT NULL AND e.episode_count = em.episode_movies_count)';
     }
     if ($filterPartial) {
-        $filterConditions[] = '(COALESCE(e.episode_count, 0) > 0 AND COALESCE(e.episode_count, 0) > COALESCE(em.episode_movies_count, 0))';
+        // Aktuell: es gibt Episoden, aber nicht alle sind als Filme vorhanden
+        $filterConditions[] = '(e.episode_count IS NOT NULL AND e.episode_count > 0 AND em.episode_movies_count IS NOT NULL AND em.episode_movies_count > 0 AND em.episode_movies_count < e.episode_count)';
     }
     if ($filterNew) {
-        $filterConditions[] = '(COALESCE(e.episode_count, 0) = 0)';
+        // Neu: Es gibt Episoden, aber KEINE dieser Episoden ist als Film in movies vorhanden
+        // Anzeige-Fall z.B.: episodeMoviesCount = 0 und episodeCount > 0 (wie 0/4)
+        $filterConditions[] = '((e.episode_count IS NOT NULL AND e.episode_count > 0) AND (em.episode_movies_count IS NULL OR em.episode_movies_count = 0))';
     }
 }
 
-// Build WHERE clause with filters
+// Build WHERE clause with base filter (title_type only)
 $whereClause = 'm.title_type IN ("Fernsehserie", "Miniserie")';
+if ($q !== '') {
+    $whereClause .= ' AND m.title LIKE ?';
+}
+
+// Build additional WHERE conditions for episode filters
+$filterWhereClause = '';
 if (!empty($filterConditions)) {
-    $whereClause .= ' AND (' . implode(' OR ', $filterConditions) . ')';
+    $filterWhereClause = ' AND (' . implode(' OR ', $filterConditions) . ')';
 }
 
 // Gesamtanzahl ermitteln (nur Serien und Miniserien)
@@ -71,26 +81,22 @@ $countSql = '
     LEFT JOIN (
         SELECT parent_tconst, COUNT(DISTINCT season_number) AS season_count
         FROM episodes
-        WHERE parent_tconst IS NOT NULL
         GROUP BY parent_tconst
     ) s ON s.parent_tconst = m.const
     LEFT JOIN (
         SELECT parent_tconst, COUNT(*) AS episode_count
         FROM episodes
-        WHERE parent_tconst IS NOT NULL
         GROUP BY parent_tconst
     ) e ON e.parent_tconst = m.const
     LEFT JOIN (
         SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count
         FROM episodes ep
         INNER JOIN movies mov ON mov.const = ep.tconst
-        WHERE ep.parent_tconst IS NOT NULL
         GROUP BY ep.parent_tconst
     ) em ON em.parent_tconst = m.const
-    WHERE ' . $whereClause;
+    WHERE ' . $whereClause . $filterWhereClause;
 
 if ($q !== '') {
-    $countSql .= ' AND m.title LIKE ?';
     $stmtCount = $pdo->prepare($countSql);
     $stmtCount->execute(["%$q%"]);
 } else {
@@ -102,8 +108,10 @@ $total = (int)$stmtCount->fetchColumn();
 $pages = max(1, (int)ceil($total / $perPage));
 
 // Daten laden (nur Serien und Miniserien) - mit Staffel- und Episodenzählung
-$sqlBase = '
-    SELECT m.*, 
+// $sqlBase variable removed - queries now inline below
+
+if ($q !== '') {
+    $stmt = $pdo->prepare('SELECT m.*, 
            COALESCE(s.season_count, 0) AS season_count, 
            COALESCE(e.episode_count, 0) AS episode_count,
            COALESCE(em.episode_movies_count, 0) AS episode_movies_count
@@ -111,32 +119,47 @@ $sqlBase = '
     LEFT JOIN (
         SELECT parent_tconst, COUNT(DISTINCT season_number) AS season_count
         FROM episodes
-        WHERE parent_tconst IS NOT NULL
         GROUP BY parent_tconst
     ) s ON s.parent_tconst = m.const
     LEFT JOIN (
         SELECT parent_tconst, COUNT(*) AS episode_count
         FROM episodes
-        WHERE parent_tconst IS NOT NULL
         GROUP BY parent_tconst
     ) e ON e.parent_tconst = m.const
     LEFT JOIN (
         SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count
         FROM episodes ep
         INNER JOIN movies mov ON mov.const = ep.tconst
-        WHERE ep.parent_tconst IS NOT NULL
         GROUP BY ep.parent_tconst
     ) em ON em.parent_tconst = m.const
-    WHERE ' . $whereClause;
-
-if ($q !== '') {
-    $stmt = $pdo->prepare($sqlBase . ' AND m.title LIKE ? ORDER BY m.title ASC LIMIT ? OFFSET ?');
+    WHERE m.title_type IN ("Fernsehserie", "Miniserie") AND m.title LIKE ?' . $filterWhereClause . ' ORDER BY m.title ASC LIMIT ? OFFSET ?');
     $stmt->bindValue(1, "%$q%");
     $stmt->bindValue(2, $perPage, PDO::PARAM_INT);
     $stmt->bindValue(3, $offset, PDO::PARAM_INT);
     $stmt->execute();
 } else {
-    $stmt = $pdo->prepare($sqlBase . ' ORDER BY m.title ASC LIMIT ? OFFSET ?');
+    $stmt = $pdo->prepare('SELECT m.*, 
+           COALESCE(s.season_count, 0) AS season_count, 
+           COALESCE(e.episode_count, 0) AS episode_count,
+           COALESCE(em.episode_movies_count, 0) AS episode_movies_count
+    FROM movies m
+    LEFT JOIN (
+        SELECT parent_tconst, COUNT(DISTINCT season_number) AS season_count
+        FROM episodes
+        GROUP BY parent_tconst
+    ) s ON s.parent_tconst = m.const
+    LEFT JOIN (
+        SELECT parent_tconst, COUNT(*) AS episode_count
+        FROM episodes
+        GROUP BY parent_tconst
+    ) e ON e.parent_tconst = m.const
+    LEFT JOIN (
+        SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count
+        FROM episodes ep
+        INNER JOIN movies mov ON mov.const = ep.tconst
+        GROUP BY ep.parent_tconst
+    ) em ON em.parent_tconst = m.const
+    WHERE m.title_type IN ("Fernsehserie", "Miniserie")' . $filterWhereClause . ' ORDER BY m.title ASC LIMIT ? OFFSET ?');
     $stmt->bindValue(1, $perPage, PDO::PARAM_INT);
     $stmt->bindValue(2, $offset, PDO::PARAM_INT);
     $stmt->execute();

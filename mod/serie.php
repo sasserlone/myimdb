@@ -11,7 +11,7 @@ $pdo = getConnection();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_episode_id'])) {
     $episodeId = (int)$_POST['delete_episode_id'];
     try {
-        $stmt = $pdo->prepare('DELETE FROM episodes WHERE id = ?');
+        $stmt = $pdo->prepare('UPDATE episodes SET visible = 0 WHERE id = ?');
         $stmt->execute([$episodeId]);
         // Redirect to avoid form resubmission
         header('Location: ?mod=serie&const=' . urlencode($const) . '&page=' . (isset($_GET['page']) ? (int)$_GET['page'] : 1));
@@ -40,19 +40,19 @@ if ($const !== '') {
     $stmt->execute([$const]);
     $seriesInfo = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Gesamtanzahl Episoden
-    $stmtCount = $pdo->prepare('SELECT COUNT(*) FROM episodes WHERE parent_tconst = ?');
+    // Gesamtanzahl Episoden (nur sichtbare)
+    $stmtCount = $pdo->prepare('SELECT COUNT(*) FROM episodes WHERE parent_tconst = ? AND visible = 1');
     $stmtCount->execute([$const]);
     $total = (int)$stmtCount->fetchColumn();
 
-    // Episoden laden (mit Episode-Details aus `movies`)
+    // Episoden laden (mit Episode-Details aus `movies`, nur sichtbare)
     $sql = '
         SELECT ep.*, mv.title AS episode_title, mv.year AS episode_year, mv.imdb_rating AS episode_imdb_rating,
                mv.num_votes AS episode_num_votes, mv.your_rating AS episode_your_rating, mv.runtime_mins AS episode_runtime_mins,
                mv.genres AS episode_genres, mv.url AS episode_url
         FROM episodes ep
         LEFT JOIN movies mv ON mv.`const` = ep.tconst
-        WHERE ep.parent_tconst = ?
+        WHERE ep.parent_tconst = ? AND ep.visible = 1
         ORDER BY COALESCE(ep.season_number, 0) ASC, COALESCE(ep.episode_number, 0) ASC
         LIMIT ? OFFSET ?
     ';

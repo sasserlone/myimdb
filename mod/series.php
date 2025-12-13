@@ -81,17 +81,20 @@ $countSql = '
     LEFT JOIN (
         SELECT parent_tconst, COUNT(DISTINCT season_number) AS season_count
         FROM episodes
+        WHERE visible = 1
         GROUP BY parent_tconst
     ) s ON s.parent_tconst = m.const
     LEFT JOIN (
         SELECT parent_tconst, COUNT(*) AS episode_count
         FROM episodes
+        WHERE visible = 1
         GROUP BY parent_tconst
     ) e ON e.parent_tconst = m.const
     LEFT JOIN (
         SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count
         FROM episodes ep
         INNER JOIN movies mov ON mov.const = ep.tconst
+        WHERE ep.visible = 1
         GROUP BY ep.parent_tconst
     ) em ON em.parent_tconst = m.const
     WHERE ' . $whereClause . $filterWhereClause;
@@ -119,17 +122,20 @@ if ($q !== '') {
     LEFT JOIN (
         SELECT parent_tconst, COUNT(DISTINCT season_number) AS season_count
         FROM episodes
+        WHERE visible = 1
         GROUP BY parent_tconst
     ) s ON s.parent_tconst = m.const
     LEFT JOIN (
         SELECT parent_tconst, COUNT(*) AS episode_count
         FROM episodes
+        WHERE visible = 1
         GROUP BY parent_tconst
     ) e ON e.parent_tconst = m.const
     LEFT JOIN (
         SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count
         FROM episodes ep
         INNER JOIN movies mov ON mov.const = ep.tconst
+        WHERE ep.visible = 1
         GROUP BY ep.parent_tconst
     ) em ON em.parent_tconst = m.const
     WHERE m.title_type IN ("Fernsehserie", "Miniserie") AND m.title LIKE ?' . $filterWhereClause . ' ORDER BY m.title ASC LIMIT ? OFFSET ?');
@@ -146,17 +152,20 @@ if ($q !== '') {
     LEFT JOIN (
         SELECT parent_tconst, COUNT(DISTINCT season_number) AS season_count
         FROM episodes
+        WHERE visible = 1
         GROUP BY parent_tconst
     ) s ON s.parent_tconst = m.const
     LEFT JOIN (
         SELECT parent_tconst, COUNT(*) AS episode_count
         FROM episodes
+        WHERE visible = 1
         GROUP BY parent_tconst
     ) e ON e.parent_tconst = m.const
     LEFT JOIN (
         SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count
         FROM episodes ep
         INNER JOIN movies mov ON mov.const = ep.tconst
+        WHERE ep.visible = 1
         GROUP BY ep.parent_tconst
     ) em ON em.parent_tconst = m.const
     WHERE m.title_type IN ("Fernsehserie", "Miniserie")' . $filterWhereClause . ' ORDER BY m.title ASC LIMIT ? OFFSET ?');

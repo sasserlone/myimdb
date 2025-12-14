@@ -73,14 +73,14 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>Serie: <?php echo $seriesInfo ? h($seriesInfo['title']) : h($const); ?></h2>
             <div>
-                <a class="btn btn-sm btn-secondary" href="?mod=series">← Zurück zu Serien</a>
+                <a class="btn btn-sm btn-outline-primary" href="?mod=series">← Zurück zu Serien</a>
             </div>
         </div>
 
         <?php if ($const === ''): ?>
             <div class="message error">Keine Serie ausgewählt.</div>
         <?php else: ?>
-            <p class="text-muted">Episoden für: <?php echo $seriesInfo ? h($seriesInfo['title']) : h($const); ?> (<?php echo number_format($total, 0, ',', '.'); ?>)</p>
+            <p>Episoden für: <?php echo $seriesInfo ? h($seriesInfo['title']) : h($const); ?> (<?php echo number_format($total, 0, ',', '.'); ?>)</p>
 
             <!-- Serien-Übersicht: gleiche Reihenfolge wie in series.php -->
             <?php if ($seriesInfo): ?>

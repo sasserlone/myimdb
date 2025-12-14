@@ -176,6 +176,14 @@ if ($q !== '') {
 
 $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Berechne Summen für Info-Card
+$totalEpisodeCount = 0;
+$totalMovieCount = 0;
+foreach ($series as $s) {
+    $totalEpisodeCount += (int)($s['episode_count'] ?? 0);
+    $totalMovieCount += (int)($s['episode_movies_count'] ?? 0);
+}
+
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
 ?>
@@ -209,6 +217,39 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                     <button type="submit" class="btn btn-sm btn-outline-secondary" name="filter_reset" value="1">Reset</button>
                 <?php endif; ?>
             </form>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card mb-3" style="background: var(--card-bg); border-color: var(--table-border);">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h5 class="card-title mb-1">Serien</h5>
+                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;"><?php echo $total; ?></p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="card-title mb-1">Alle Episoden</h5>
+                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;"><?php echo h(number_format($totalEpisodeCount, 0, ',', '.')); ?></p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="card-title mb-1">Importierte</h5>
+                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;"><?php echo h(number_format($totalMovieCount, 0, ',', '.')); ?></p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="card-title mb-1">Fortschritt</h5>
+                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;">
+                            <?php 
+                            if ($totalEpisodeCount > 0) {
+                                $percentage = round(($totalMovieCount / $totalEpisodeCount) * 100);
+                                echo h($percentage) . '%';
+                            } else {
+                                echo '0%';
+                            }
+                            ?>
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="table-responsive">

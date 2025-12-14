@@ -97,7 +97,7 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                                 } ?><br>
                             </div>
                             <div class="col-md-6">
-                                <strong>Ich:</strong> <?php echo $seriesInfo['your_rating'] !== null ? h($seriesInfo['your_rating']) : ''; ?><br>
+                                <strong>meine Bewertung:</strong> <?php echo $seriesInfo['your_rating'] !== null ? h($seriesInfo['your_rating']) : ''; ?><br>
                                 <strong>Laufzeit:</strong> <?php echo $seriesInfo['runtime_mins'] !== null ? h($seriesInfo['runtime_mins']) . ' min' : ''; ?><br>
                                 <strong>Genres:</strong> <?php echo h($seriesInfo['genres']); ?><br>
                             </div>

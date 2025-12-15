@@ -14,31 +14,80 @@ if (!empty($_GET['q'])) {
     $q = trim($_GET['q']);
 }
 
+// Filter nach title_type
+$titleTypeFilter = '';
+if (!empty($_GET['title_type'])) {
+    $titleTypeFilter = trim($_GET['title_type']);
+}
+
 $pdo = getConnection();
 
-// Gesamtanzahl ermitteln
+// Build WHERE clause
+$whereParts = [];
+$params = [];
+
 if ($q !== '') {
-    $stmtCount = $pdo->prepare('SELECT COUNT(*) FROM movies WHERE title LIKE ?');
-    $stmtCount->execute(["%$q%"]);
+    $whereParts[] = 'title LIKE ?';
+    $params[] = "%$q%";
+}
+
+if ($titleTypeFilter !== '') {
+    if ($titleTypeFilter === 'nur_filme') {
+        // Nur Filme: alles außer Fernsehepisode, Miniserie, Fernsehserie
+        $whereParts[] = 'title_type NOT IN ("Fernsehepisode", "Miniserie", "Fernsehserie")';
+    } elseif ($titleTypeFilter === 'nur_serien') {
+        // Nur Serien: Fernsehserie und Miniserie
+        $whereParts[] = 'title_type IN ("Fernsehserie", "Miniserie")';
+    } else {
+        // Spezifischer title_type
+        $whereParts[] = 'title_type = ?';
+        $params[] = $titleTypeFilter;
+    }
+}
+
+$whereClause = !empty($whereParts) ? 'WHERE ' . implode(' AND ', $whereParts) : '';
+
+// Gesamtanzahl ermitteln
+$countSql = 'SELECT COUNT(*) FROM movies ' . $whereClause;
+if (!empty($params)) {
+    $stmtCount = $pdo->prepare($countSql);
+    $stmtCount->execute($params);
 } else {
-    $stmtCount = $pdo->query('SELECT COUNT(*) FROM movies');
+    $stmtCount = $pdo->query($countSql);
 }
 $total = (int)$stmtCount->fetchColumn();
 
 $pages = max(1, (int)ceil($total / $perPage));
 
-// Daten laden
-if ($q !== '') {
-    $stmt = $pdo->prepare('SELECT * FROM movies ORDER BY title ASC LIMIT ? OFFSET ?');
-    $stmt->bindValue(1, $perPage, PDO::PARAM_INT);
-    $stmt->bindValue(2, $offset, PDO::PARAM_INT);
-    $stmt->execute();
+// Summen über alle gefilterten Filme (unabhängig von der aktuellen Seite)
+$sumSql = 'SELECT 
+    COUNT(*) AS total_movies,
+    SUM(CASE WHEN your_rating IS NOT NULL THEN 1 ELSE 0 END) AS rated_movies,
+    COALESCE(SUM(CASE WHEN runtime_mins IS NOT NULL THEN runtime_mins ELSE 0 END), 0) AS total_runtime,
+    COALESCE(SUM(CASE WHEN your_rating IS NOT NULL AND runtime_mins IS NOT NULL THEN runtime_mins ELSE 0 END), 0) AS rated_runtime
+    FROM movies ' . $whereClause;
+if (!empty($params)) {
+    $stmtSum = $pdo->prepare($sumSql);
+    $stmtSum->execute($params);
 } else {
-    $stmt = $pdo->prepare('SELECT * FROM movies ORDER BY title ASC LIMIT ? OFFSET ?');
-    $stmt->bindValue(1, $perPage, PDO::PARAM_INT);
-    $stmt->bindValue(2, $offset, PDO::PARAM_INT);
-    $stmt->execute();
+    $stmtSum = $pdo->query($sumSql);
 }
+$sumRow = $stmtSum->fetch(PDO::FETCH_ASSOC);
+$totalMovies = (int)($sumRow['total_movies'] ?? 0);
+$ratedMovies = (int)($sumRow['rated_movies'] ?? 0);
+$totalRuntime = (int)($sumRow['total_runtime'] ?? 0);
+$ratedRuntime = (int)($sumRow['rated_runtime'] ?? 0);
+
+// Daten laden
+$selectSql = 'SELECT * FROM movies ' . $whereClause . ' ORDER BY title ASC LIMIT ? OFFSET ?';
+$stmt = $pdo->prepare($selectSql);
+$paramIndex = 1;
+foreach ($params as $param) {
+    $stmt->bindValue($paramIndex++, $param, PDO::PARAM_STR);
+}
+$stmt->bindValue($paramIndex++, $perPage, PDO::PARAM_INT);
+$stmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
+$stmt->execute();
 
 $movies = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -52,9 +101,49 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
             <h2>Filme</h2>
             <form class="d-flex" method="get" style="gap:.5rem">
                 <input type="hidden" name="mod" value="movies">
+                <select class="form-select form-select-sm" name="title_type" style="width: auto;">
+                    <option value="">Alle Typen</option>
+                    <option value="nur_filme" <?php echo $titleTypeFilter === 'nur_filme' ? 'selected' : ''; ?>>Nur Filme</option>
+                    <option value="nur_serien" <?php echo $titleTypeFilter === 'nur_serien' ? 'selected' : ''; ?>>Nur Serien</option>
+                    <option value="" disabled>──────────</option>
+                    <option value="Film" <?php echo $titleTypeFilter === 'Film' ? 'selected' : ''; ?>>Film</option>
+                    <option value="Kurzfilm" <?php echo $titleTypeFilter === 'Kurzfilm' ? 'selected' : ''; ?>>Kurzfilm</option>
+                    <option value="Video" <?php echo $titleTypeFilter === 'Video' ? 'selected' : ''; ?>>Video</option>
+                    <option value="Videospiel" <?php echo $titleTypeFilter === 'Videospiel' ? 'selected' : ''; ?>>Videospiel</option>
+                    <option value="Fernsehepisode" <?php echo $titleTypeFilter === 'Fernsehepisode' ? 'selected' : ''; ?>>Fernsehepisode</option>
+                    <option value="Fernsehfilm" <?php echo $titleTypeFilter === 'Fernsehfilm' ? 'selected' : ''; ?>>Fernsehfilm</option>
+                    <option value="Fernsehkurzfilm" <?php echo $titleTypeFilter === 'Fernsehkurzfilm' ? 'selected' : ''; ?>>Fernsehkurzfilm</option>
+                    <option value="Fernsehserie" <?php echo $titleTypeFilter === 'Fernsehserie' ? 'selected' : ''; ?>>Fernsehserie</option>
+                    <option value="Fernsehspecial" <?php echo $titleTypeFilter === 'Fernsehspecial' ? 'selected' : ''; ?>>Fernsehspecial</option>
+                    <option value="Miniserie" <?php echo $titleTypeFilter === 'Miniserie' ? 'selected' : ''; ?>>Miniserie</option>
+                </select>
                 <input class="form-control form-control-sm" type="search" name="q" placeholder="Suche Titel" value="<?php echo h($q); ?>">
                 <button class="btn btn-sm btn-primary ms-2">Suchen</button>
             </form>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card mb-3" style="background: var(--card-bg); border-color: var(--table-border);">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h5 class="card-title mb-1">Alle Filme</h5>
+                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;"><?php echo $totalMovies; ?></p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="card-title mb-1">Bewertete Filme</h5>
+                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;"><?php echo $ratedMovies; ?></p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="card-title mb-1">Laufzeit gesamt</h5>
+                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;"><?php echo h(number_format($totalRuntime, 0, ',', '.')); ?> min</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h5 class="card-title mb-1">Laufzeit bewertet</h5>
+                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;"><?php echo h(number_format($ratedRuntime, 0, ',', '.')); ?> min</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="table-responsive">
@@ -110,6 +199,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 <?php
                 $baseUrl = '?mod=movies';
                 if ($q !== '') $baseUrl .= '&q=' . urlencode($q);
+                if ($titleTypeFilter !== '') $baseUrl .= '&title_type=' . urlencode($titleTypeFilter);
                 
                 // Previous-Link
                 if ($page > 1):

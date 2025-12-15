@@ -85,13 +85,14 @@ $countSql = '
         GROUP BY parent_tconst
     ) s ON s.parent_tconst = m.const
     LEFT JOIN (
-        SELECT parent_tconst, COUNT(*) AS episode_count
-        FROM episodes
-        WHERE visible = 1
-        GROUP BY parent_tconst
+        SELECT ep.parent_tconst, COUNT(*) AS episode_count, COALESCE(SUM(mov.runtime_mins), 0) AS episode_runtime_sum
+        FROM episodes ep
+        LEFT JOIN movies mov ON mov.const = ep.tconst
+        WHERE ep.visible = 1
+        GROUP BY ep.parent_tconst
     ) e ON e.parent_tconst = m.const
     LEFT JOIN (
-        SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count
+        SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count, COALESCE(SUM(mov.runtime_mins), 0) AS episode_movies_runtime_sum
         FROM episodes ep
         INNER JOIN movies mov ON mov.const = ep.tconst
         WHERE ep.visible = 1
@@ -114,7 +115,10 @@ $pages = max(1, (int)ceil($total / $perPage));
 $sumSql = '
     SELECT 
         COALESCE(SUM(e.episode_count), 0) AS sum_episode_count,
-        COALESCE(SUM(em.episode_movies_count), 0) AS sum_episode_movies_count
+        COALESCE(SUM(em.episode_movies_count), 0) AS sum_episode_movies_count,
+        COALESCE(SUM(e.episode_runtime_sum), 0) AS sum_episode_runtime,
+        COALESCE(SUM(em.episode_movies_runtime_sum), 0) AS sum_episode_movies_runtime,
+        COALESCE(SUM(GREATEST(e.episode_count - COALESCE(em.episode_movies_count, 0), 0) * COALESCE(m.runtime_mins, 0)), 0) AS sum_open_runtime
     FROM movies m
     LEFT JOIN (
         SELECT parent_tconst, COUNT(DISTINCT season_number) AS season_count
@@ -123,13 +127,14 @@ $sumSql = '
         GROUP BY parent_tconst
     ) s ON s.parent_tconst = m.const
     LEFT JOIN (
-        SELECT parent_tconst, COUNT(*) AS episode_count
-        FROM episodes
-        WHERE visible = 1
-        GROUP BY parent_tconst
+        SELECT ep.parent_tconst, COUNT(*) AS episode_count, COALESCE(SUM(mov.runtime_mins), 0) AS episode_runtime_sum
+        FROM episodes ep
+        LEFT JOIN movies mov ON mov.const = ep.tconst
+        WHERE ep.visible = 1
+        GROUP BY ep.parent_tconst
     ) e ON e.parent_tconst = m.const
     LEFT JOIN (
-        SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count
+        SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count, COALESCE(SUM(mov.runtime_mins), 0) AS episode_movies_runtime_sum
         FROM episodes ep
         INNER JOIN movies mov ON mov.const = ep.tconst
         WHERE ep.visible = 1
@@ -147,6 +152,9 @@ if ($q !== '') {
 $sumRow = $stmtSum->fetch(PDO::FETCH_ASSOC);
 $totalEpisodeCount = (int)($sumRow['sum_episode_count'] ?? 0);
 $totalMovieCount = (int)($sumRow['sum_episode_movies_count'] ?? 0);
+$totalEpisodeRuntime = (int)($sumRow['sum_episode_runtime'] ?? 0);
+$totalMovieRuntime = (int)($sumRow['sum_episode_movies_runtime'] ?? 0);
+$openRuntime = (int)($sumRow['sum_open_runtime'] ?? 0);
 
 // Daten laden (nur Serien und Miniserien) - mit Staffel- und Episodenzählung
 // $sqlBase variable removed - queries now inline below
@@ -215,6 +223,12 @@ if ($q !== '') {
 $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+function formatMinutesToHours($minutes) {
+    $minutes = max(0, (int)$minutes);
+    $hours = intdiv($minutes, 60);
+    $mins = $minutes % 60;
+    return number_format($hours, 0, ',', '.') . ':' . str_pad((string)$mins, 2, '0', STR_PAD_LEFT);
+}
 
 ?>
 
@@ -253,21 +267,25 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
         <div class="card mb-3" style="background: var(--card-bg); border-color: var(--table-border);">
             <div class="card-body">
                 <div class="row text-center">
-                    <div class="col-md-3">
-                        <h5 class="card-title mb-1">Serien</h5>
-                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;"><?php echo $total; ?></p>
+                    <div class="col-md-2">
+                        <h6 class="card-title mb-1">Serien</h6>
+                        <p class="card-text" style="font-size: 1.2em; font-weight: bold;"><?php echo $total; ?></p>
                     </div>
-                    <div class="col-md-3">
-                        <h5 class="card-title mb-1">Alle Episoden</h5>
-                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;"><?php echo h(number_format($totalEpisodeCount, 0, ',', '.')); ?></p>
+                    <div class="col-md-2">
+                        <h6 class="card-title mb-1">Alle Episoden</h6>
+                        <p class="card-text" style="font-size: 1.2em; font-weight: bold;"><?php echo h(number_format($totalEpisodeCount, 0, ',', '.')); ?> (<?php echo h(formatMinutesToHours($totalEpisodeRuntime)); ?> h)</p>
                     </div>
-                    <div class="col-md-3">
-                        <h5 class="card-title mb-1">Importierte</h5>
-                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;"><?php echo h(number_format($totalMovieCount, 0, ',', '.')); ?></p>
+                    <div class="col-md-2">
+                        <h6 class="card-title mb-1">Importierte</h6>
+                        <p class="card-text" style="font-size: 1.2em; font-weight: bold;"><?php echo h(number_format($totalMovieCount, 0, ',', '.')); ?> (<?php echo h(formatMinutesToHours($totalMovieRuntime)); ?> h)</p>
                     </div>
-                    <div class="col-md-3">
-                        <h5 class="card-title mb-1">Fortschritt</h5>
-                        <p class="card-text" style="font-size: 1.5em; font-weight: bold;">
+                    <div class="col-md-2">
+                        <h6 class="card-title mb-1">Offene</h6>
+                        <p class="card-text" style="font-size: 1.2em; font-weight: bold;"><?php echo h(number_format($totalEpisodeCount-$totalMovieCount, 0, ',', '.')); ?> (<?php echo h(formatMinutesToHours($openRuntime)); ?> h)</p>
+                    </div>
+                    <div class="col-md-2">
+                        <h6 class="card-title mb-1">Fortschritt</h6>
+                        <p class="card-text" style="font-size: 1.2em; font-weight: bold;">
                             <?php 
                             if ($totalEpisodeCount > 0) {
                                 $percentage = round(($totalMovieCount / $totalEpisodeCount) * 100);

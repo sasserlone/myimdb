@@ -110,6 +110,44 @@ $total = (int)$stmtCount->fetchColumn();
 
 $pages = max(1, (int)ceil($total / $perPage));
 
+// Summen über alle gefilterten Serien (unabhängig von der aktuellen Seite)
+$sumSql = '
+    SELECT 
+        COALESCE(SUM(e.episode_count), 0) AS sum_episode_count,
+        COALESCE(SUM(em.episode_movies_count), 0) AS sum_episode_movies_count
+    FROM movies m
+    LEFT JOIN (
+        SELECT parent_tconst, COUNT(DISTINCT season_number) AS season_count
+        FROM episodes
+        WHERE visible = 1
+        GROUP BY parent_tconst
+    ) s ON s.parent_tconst = m.const
+    LEFT JOIN (
+        SELECT parent_tconst, COUNT(*) AS episode_count
+        FROM episodes
+        WHERE visible = 1
+        GROUP BY parent_tconst
+    ) e ON e.parent_tconst = m.const
+    LEFT JOIN (
+        SELECT ep.parent_tconst, COUNT(*) AS episode_movies_count
+        FROM episodes ep
+        INNER JOIN movies mov ON mov.const = ep.tconst
+        WHERE ep.visible = 1
+        GROUP BY ep.parent_tconst
+    ) em ON em.parent_tconst = m.const
+    WHERE ' . $whereClause . $filterWhereClause;
+
+if ($q !== '') {
+    $stmtSum = $pdo->prepare($sumSql);
+    $stmtSum->execute(["%$q%"]);
+} else {
+    $stmtSum = $pdo->prepare($sumSql);
+    $stmtSum->execute();
+}
+$sumRow = $stmtSum->fetch(PDO::FETCH_ASSOC);
+$totalEpisodeCount = (int)($sumRow['sum_episode_count'] ?? 0);
+$totalMovieCount = (int)($sumRow['sum_episode_movies_count'] ?? 0);
+
 // Daten laden (nur Serien und Miniserien) - mit Staffel- und Episodenzählung
 // $sqlBase variable removed - queries now inline below
 
@@ -175,14 +213,6 @@ if ($q !== '') {
 }
 
 $series = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Berechne Summen für Info-Card
-$totalEpisodeCount = 0;
-$totalMovieCount = 0;
-foreach ($series as $s) {
-    $totalEpisodeCount += (int)($s['episode_count'] ?? 0);
-    $totalMovieCount += (int)($s['episode_movies_count'] ?? 0);
-}
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 

@@ -20,7 +20,25 @@ if (!empty($_GET['title_type'])) {
     $titleTypeFilter = trim($_GET['title_type']);
 }
 
+// Genre-Filter
+$genreFilter = '';
+if (!empty($_GET['genre'])) {
+    $genreFilter = (int)$_GET['genre'];
+}
+
 $pdo = getConnection();
+
+// Get all distinct genres from genres table
+$genreStmt = $pdo->query('
+    SELECT DISTINCT g.id, g.name 
+    FROM genres g
+    INNER JOIN movies_genres mg ON mg.genre_id = g.id
+    ORDER BY g.name
+');
+$allGenres = [];
+while ($row = $genreStmt->fetch(PDO::FETCH_ASSOC)) {
+    $allGenres[$row['id']] = $row['name'];
+}
 
 // Build WHERE clause
 $whereParts = [];
@@ -43,6 +61,11 @@ if ($titleTypeFilter !== '') {
         $whereParts[] = 'title_type = ?';
         $params[] = $titleTypeFilter;
     }
+}
+
+if ($genreFilter !== '') {
+    $whereParts[] = 'EXISTS (SELECT 1 FROM movies_genres mg WHERE mg.movie_id = movies.id AND mg.genre_id = ?)';
+    $params[] = (int)$genreFilter;
 }
 
 $whereClause = !empty($whereParts) ? 'WHERE ' . implode(' AND ', $whereParts) : '';
@@ -101,6 +124,12 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
             <h2>Filme</h2>
             <form class="d-flex" method="get" style="gap:.5rem">
                 <input type="hidden" name="mod" value="movies">
+                <select class="form-select form-select-sm" name="genre" style="width: auto;">
+                    <option value="">Alle Genres</option>
+                    <?php foreach ($allGenres as $genreId => $label): ?>
+                        <option value="<?php echo (int)$genreId; ?>" <?php echo (int)$genreFilter === (int)$genreId ? 'selected' : ''; ?>><?php echo h($label); ?></option>
+                    <?php endforeach; ?>
+                </select>
                 <select class="form-select form-select-sm" name="title_type" style="width: auto;">
                     <option value="">Alle Typen</option>
                     <option value="nur_filme" <?php echo $titleTypeFilter === 'nur_filme' ? 'selected' : ''; ?>>Nur Filme</option>
@@ -200,6 +229,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 $baseUrl = '?mod=movies';
                 if ($q !== '') $baseUrl .= '&q=' . urlencode($q);
                 if ($titleTypeFilter !== '') $baseUrl .= '&title_type=' . urlencode($titleTypeFilter);
+                if ($genreFilter !== '') $baseUrl .= '&genre=' . (int)$genreFilter;
                 
                 // Previous-Link
                 if ($page > 1):

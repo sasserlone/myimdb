@@ -288,14 +288,28 @@ function formatMinutesToHours($minutes) {
         <div class="mb-3">
             <form method="get" class="d-flex gap-2 justify-content-between align-items-center">
                 <input type="hidden" name="mod" value="series">
+                <!-- Hidden inputs to preserve filter state when using search/genre -->
+                <input type="hidden" name="filter_complete" value="<?php echo $filterComplete; ?>" id="hidden_filter_complete">
+                <input type="hidden" name="filter_partial" value="<?php echo $filterPartial; ?>" id="hidden_filter_partial">
+                <input type="hidden" name="filter_new" value="<?php echo $filterNew; ?>" id="hidden_filter_new">
+                
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-sm <?php echo $filterComplete ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_complete" value="<?php echo $filterComplete ? '0' : '1'; ?>">
+                    <button type="submit" class="btn btn-sm <?php echo $filterComplete ? 'btn-primary' : 'btn-outline-primary'; ?>" 
+                            onclick="document.getElementById('hidden_filter_complete').value = <?php echo $filterComplete ? '0' : '1'; ?>; 
+                                     document.getElementById('hidden_filter_partial').value = '<?php echo $filterPartial; ?>';
+                                     document.getElementById('hidden_filter_new').value = '<?php echo $filterNew; ?>';">
                         Vollständig
                     </button>
-                    <button type="submit" class="btn btn-sm <?php echo $filterPartial ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_partial" value="<?php echo $filterPartial ? '0' : '1'; ?>">
+                    <button type="submit" class="btn btn-sm <?php echo $filterPartial ? 'btn-primary' : 'btn-outline-primary'; ?>" 
+                            onclick="document.getElementById('hidden_filter_complete').value = '<?php echo $filterComplete; ?>';
+                                     document.getElementById('hidden_filter_partial').value = <?php echo $filterPartial ? '0' : '1'; ?>;
+                                     document.getElementById('hidden_filter_new').value = '<?php echo $filterNew; ?>';">
                         Aktuell
                     </button>
-                    <button type="submit" class="btn btn-sm <?php echo $filterNew ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_new" value="<?php echo $filterNew ? '0' : '1'; ?>">
+                    <button type="submit" class="btn btn-sm <?php echo $filterNew ? 'btn-primary' : 'btn-outline-primary'; ?>" 
+                            onclick="document.getElementById('hidden_filter_complete').value = '<?php echo $filterComplete; ?>';
+                                     document.getElementById('hidden_filter_partial').value = '<?php echo $filterPartial; ?>';
+                                     document.getElementById('hidden_filter_new').value = <?php echo $filterNew ? '0' : '1'; ?>;">
                         Neu
                     </button>
                     <?php if ($filterComplete || $filterPartial || $filterNew || $genreFilter !== ''): ?>

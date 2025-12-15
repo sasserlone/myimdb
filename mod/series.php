@@ -34,15 +34,34 @@ if (!empty($_GET['q'])) {
 $filterComplete = isset($_GET['filter_complete']) ? (int)$_GET['filter_complete'] : 0;
 $filterPartial = isset($_GET['filter_partial']) ? (int)$_GET['filter_partial'] : 0;
 $filterNew = isset($_GET['filter_new']) ? (int)$_GET['filter_new'] : 0;
+$genreFilter = '';
+if (!empty($_GET['genre'])) {
+    $genreFilter = (int)$_GET['genre'];
+}
 
 // Reset filter if requested
 if (isset($_GET['filter_reset'])) {
     $filterComplete = 0;
     $filterPartial = 0;
     $filterNew = 0;
+    $genreFilter = 0;
 }
 
 $pdo = getConnection();
+
+// Get all distinct genres from genres table (for series only)
+$genreStmt = $pdo->query('
+    SELECT DISTINCT g.id, g.name 
+    FROM genres g
+    INNER JOIN movies_genres mg ON mg.genre_id = g.id
+    INNER JOIN movies m ON m.id = mg.movie_id
+    WHERE m.title_type IN ("Fernsehserie", "Miniserie")
+    ORDER BY g.name
+');
+$allGenres = [];
+while ($row = $genreStmt->fetch(PDO::FETCH_ASSOC)) {
+    $allGenres[$row['id']] = $row['name'];
+}
 
 // Build filter condition based on toggles
 $filterConditions = [];
@@ -67,6 +86,9 @@ if ($filterComplete || $filterPartial || $filterNew) {
 $whereClause = 'm.title_type IN ("Fernsehserie", "Miniserie")';
 if ($q !== '') {
     $whereClause .= ' AND m.title LIKE ?';
+}
+if ($genreFilter !== '') {
+    $whereClause .= ' AND EXISTS (SELECT 1 FROM movies_genres mg2 WHERE mg2.movie_id = m.id AND mg2.genre_id = ?)';
 }
 
 // Build additional WHERE conditions for episode filters
@@ -102,10 +124,18 @@ $countSql = '
 
 if ($q !== '') {
     $stmtCount = $pdo->prepare($countSql);
-    $stmtCount->execute(["%$q%"]);
+    if ($genreFilter !== '') {
+        $stmtCount->execute(["%$q%", $genreFilter]);
+    } else {
+        $stmtCount->execute(["%$q%"]);
+    }
 } else {
     $stmtCount = $pdo->prepare($countSql);
-    $stmtCount->execute();
+    if ($genreFilter !== '') {
+        $stmtCount->execute([$genreFilter]);
+    } else {
+        $stmtCount->execute();
+    }
 }
 $total = (int)$stmtCount->fetchColumn();
 
@@ -144,10 +174,18 @@ $sumSql = '
 
 if ($q !== '') {
     $stmtSum = $pdo->prepare($sumSql);
-    $stmtSum->execute(["%$q%"]);
+    if ($genreFilter !== '') {
+        $stmtSum->execute(["%$q%", $genreFilter]);
+    } else {
+        $stmtSum->execute(["%$q%"]);
+    }
 } else {
     $stmtSum = $pdo->prepare($sumSql);
-    $stmtSum->execute();
+    if ($genreFilter !== '') {
+        $stmtSum->execute([$genreFilter]);
+    } else {
+        $stmtSum->execute();
+    }
 }
 $sumRow = $stmtSum->fetch(PDO::FETCH_ASSOC);
 $totalEpisodeCount = (int)($sumRow['sum_episode_count'] ?? 0);
@@ -184,10 +222,14 @@ if ($q !== '') {
         WHERE ep.visible = 1
         GROUP BY ep.parent_tconst
     ) em ON em.parent_tconst = m.const
-    WHERE m.title_type IN ("Fernsehserie", "Miniserie") AND m.title LIKE ?' . $filterWhereClause . ' ORDER BY m.title ASC LIMIT ? OFFSET ?');
+    WHERE m.title_type IN ("Fernsehserie", "Miniserie") AND m.title LIKE ?' . ((int)$genreFilter !== 0 ? ' AND EXISTS (SELECT 1 FROM movies_genres mg2 WHERE mg2.movie_id = m.id AND mg2.genre_id = ?)' : '') . $filterWhereClause . ' ORDER BY m.title ASC LIMIT ? OFFSET ?');
     $stmt->bindValue(1, "%$q%");
-    $stmt->bindValue(2, $perPage, PDO::PARAM_INT);
-    $stmt->bindValue(3, $offset, PDO::PARAM_INT);
+    $paramIdx = 2;
+    if ((int)$genreFilter !== 0) {
+        $stmt->bindValue($paramIdx++, (int)$genreFilter, PDO::PARAM_INT);
+    }
+    $stmt->bindValue($paramIdx++, $perPage, PDO::PARAM_INT);
+    $stmt->bindValue($paramIdx++, $offset, PDO::PARAM_INT);
     $stmt->execute();
 } else {
     $stmt = $pdo->prepare('SELECT m.*, 
@@ -214,9 +256,13 @@ if ($q !== '') {
         WHERE ep.visible = 1
         GROUP BY ep.parent_tconst
     ) em ON em.parent_tconst = m.const
-    WHERE m.title_type IN ("Fernsehserie", "Miniserie")' . $filterWhereClause . ' ORDER BY m.title ASC LIMIT ? OFFSET ?');
-    $stmt->bindValue(1, $perPage, PDO::PARAM_INT);
-    $stmt->bindValue(2, $offset, PDO::PARAM_INT);
+    WHERE m.title_type IN ("Fernsehserie", "Miniserie")' . ((int)$genreFilter !== 0 ? ' AND EXISTS (SELECT 1 FROM movies_genres mg2 WHERE mg2.movie_id = m.id AND mg2.genre_id = ?)' : '') . $filterWhereClause . ' ORDER BY m.title ASC LIMIT ? OFFSET ?');
+    $paramIdx = 1;
+    if ((int)$genreFilter !== 0) {
+        $stmt->bindValue($paramIdx++, (int)$genreFilter, PDO::PARAM_INT);
+    }
+    $stmt->bindValue($paramIdx++, $perPage, PDO::PARAM_INT);
+    $stmt->bindValue($paramIdx++, $offset, PDO::PARAM_INT);
     $stmt->execute();
 }
 
@@ -236,30 +282,36 @@ function formatMinutesToHours($minutes) {
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>Serien</h2>
-            <form class="d-flex" method="get" style="gap:.5rem">
-                <input type="hidden" name="mod" value="series">
-                <input class="form-control form-control-sm" type="search" name="q" placeholder="Suche Titel" value="<?php echo h($q); ?>">
-                <button class="btn btn-sm btn-primary ms-2">Suchen</button>
-            </form>
         </div>
 
         <!-- Filter Buttons -->
         <div class="mb-3">
-            <form method="get" class="d-flex gap-2">
+            <form method="get" class="d-flex gap-2 justify-content-between align-items-center">
                 <input type="hidden" name="mod" value="series">
-                <input type="hidden" name="q" value="<?php echo h($q); ?>">
-                <button type="submit" class="btn btn-sm <?php echo $filterComplete ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_complete" value="<?php echo $filterComplete ? '0' : '1'; ?>">
-                    Vollständig
-                </button>
-                <button type="submit" class="btn btn-sm <?php echo $filterPartial ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_partial" value="<?php echo $filterPartial ? '0' : '1'; ?>">
-                    Aktuell
-                </button>
-                <button type="submit" class="btn btn-sm <?php echo $filterNew ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_new" value="<?php echo $filterNew ? '0' : '1'; ?>">
-                    Neu
-                </button>
-                <?php if ($filterComplete || $filterPartial || $filterNew): ?>
-                    <button type="submit" class="btn btn-sm btn-outline-secondary" name="filter_reset" value="1">Reset</button>
-                <?php endif; ?>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-sm <?php echo $filterComplete ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_complete" value="<?php echo $filterComplete ? '0' : '1'; ?>">
+                        Vollständig
+                    </button>
+                    <button type="submit" class="btn btn-sm <?php echo $filterPartial ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_partial" value="<?php echo $filterPartial ? '0' : '1'; ?>">
+                        Aktuell
+                    </button>
+                    <button type="submit" class="btn btn-sm <?php echo $filterNew ? 'btn-primary' : 'btn-outline-primary'; ?>" name="filter_new" value="<?php echo $filterNew ? '0' : '1'; ?>">
+                        Neu
+                    </button>
+                    <?php if ($filterComplete || $filterPartial || $filterNew || $genreFilter !== ''): ?>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" name="filter_reset" value="1">Reset</button>
+                    <?php endif; ?>
+                </div>
+                <div class="d-flex gap-2">
+                    <select class="form-select form-select-sm" name="genre" style="width: auto;">
+                        <option value="">Alle Genres</option>
+                        <?php foreach ($allGenres as $genreId => $label): ?>
+                            <option value="<?php echo (int)$genreId; ?>" <?php echo (int)$genreFilter === (int)$genreId ? 'selected' : ''; ?>><?php echo h($label); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <input class="form-control form-control-sm" type="search" name="q" placeholder="Suche Titel" value="<?php echo h($q); ?>" style="width: auto;">
+                    <button type="submit" class="btn btn-sm btn-primary">Suchen</button>
+                </div>
             </form>
         </div>
 
@@ -366,6 +418,7 @@ function formatMinutesToHours($minutes) {
                 <?php
                 $baseUrl = '?mod=series';
                 if ($q !== '') $baseUrl .= '&q=' . urlencode($q);
+                if ((int)$genreFilter !== 0) $baseUrl .= '&genre=' . (int)$genreFilter;
                 if ($filterComplete) $baseUrl .= '&filter_complete=1';
                 if ($filterPartial) $baseUrl .= '&filter_partial=1';
                 if ($filterNew) $baseUrl .= '&filter_new=1';

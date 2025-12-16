@@ -54,6 +54,7 @@ header('Content-Type: text/html; charset=utf-8');
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="importDropdown">
                             <li><a class="dropdown-item" href="?mod=import_ratings">Ratings</a></li>
+                            <li><a class="dropdown-item" href="?mod=import">Import</a></li>
                             <li><a class="dropdown-item" href="?mod=import_movies">Filme</a></li>
                             <li><a class="dropdown-item" href="?mod=import_episodes">Episoden</a></li>
                         </ul>

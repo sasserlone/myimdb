@@ -9,6 +9,9 @@ function loadModule($mod)
         case 'import_ratings':
             require_once 'mod/import_ratings.php';
             break;
+        case 'import':
+            require_once 'mod/import.php';
+            break;
         case 'import_movies':
             require_once 'mod/import_movies.php';
             break;

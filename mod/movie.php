@@ -9,12 +9,7 @@ function formatCharacters($raw) {
     if ($raw === null || $raw === '') {
         return '';
     }
-
-    $decoded = json_decode($raw, true);
-    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-        return implode(', ', $decoded);
-    }
-
+    // Characters sind bereits bereinigt vom Import
     return $raw;
 }
 
@@ -127,7 +122,7 @@ foreach ($principals as $p) {
                                     </td>
                                     <td><?php echo h($p['category']); ?></td>
                                     <td style="max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                        <?php echo h(formatCharacters($p['characters'])); ?>
+                                        <?php echo h($p['characters']); ?>
                                     </td>
                                     <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                         <?php echo h($p['job']); ?>
@@ -170,7 +165,7 @@ foreach ($principals as $p) {
                                     </td>
                                     <td><?php echo h($p['category']); ?></td>
                                     <td style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                        <?php echo h(formatCharacters($p['characters'] ?: $p['primary_profession'])); ?>
+                                        <?php echo h($p['characters'] ?: $p['primary_profession']); ?>
                                     </td>
                                     <td style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                         <?php echo h($p['job']); ?>

@@ -78,6 +78,21 @@ $insertSql = 'INSERT INTO movie_principals (movie_id, ordering, nconst, category
               ON DUPLICATE KEY UPDATE category = VALUES(category), job = VALUES(job), characters = VALUES(characters)';
 $insertStmt = $pdo->prepare($insertSql);
 
+// Hilfsfunktion: Characters-String bereinigen (JSON-Array zu komma-getrennter Liste)
+function cleanCharacters($raw) {
+    if ($raw === null || $raw === '' || $raw === '\\N') {
+        return null;
+    }
+    // Versuchen, JSON zu dekodieren
+    $decoded = json_decode($raw, true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+        // JSON-Array gefunden: Komma-getrennte Liste erstellen
+        return implode(', ', $decoded);
+    }
+    // Falls kein JSON: Rohen String zurückgeben
+    return $raw;
+}
+
 $pdo->beginTransaction();
 $batchSize = 5000;
 $inBatch = 0;
@@ -105,7 +120,7 @@ while (($row = fgetcsv($handle, 0, "\t")) !== false) {
     $jobRaw = $row[$headerMap['job']] ?? '\\N';
     $job = $jobRaw !== '\\N' ? $jobRaw : null;
     $charactersRaw = $row[$headerMap['characters']] ?? '\\N';
-    $characters = $charactersRaw !== '\\N' ? $charactersRaw : null;
+    $characters = cleanCharacters($charactersRaw);
 
     $insertStmt->execute([$movieId, $ordering, $nconst, $category, $job, $characters]);
     $imported++;

@@ -1,0 +1,25 @@
+# Git ignore file for MyIMDb project
+
+# Logs directory
+logs/
+
+# Batch files
+*.bat
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Database backups
+db/backups/
+
+# Uploads (optional, depending on your needs)
+# uploads/

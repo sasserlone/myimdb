@@ -1,4 +1,0 @@
-[2025-12-16 19:25:46] Pipeline wird gestartet...
-[DEBUG] Command: C:\xampp\php\php.exe C:\xampp\htdocs\movies\scripts\pipeline_runner.php --episodes=C:\Users\User\Downloads\imdb\imdb\title.episode.tsv --principals=C:\Users\User\Downloads\imdb\imdb\title.principals.tsv --names=C:\Users\User\Downloads\imdb\imdb\name.basics.tsv --log=C:\xampp\htdocs\movies\logs\imdb_pipeline_20251216_192546.log
-Die Syntax fÅr den Dateinamen, Verzeichnisnamen oder die DatentrÑgerbezeichnung ist falsch.
-[FEHLER] Exitcode: 1

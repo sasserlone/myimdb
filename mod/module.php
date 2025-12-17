@@ -27,6 +27,9 @@ function loadModule($mod)
         case 'serie':
             require_once 'mod/serie.php';
             break;
+        case 'movie':
+            require_once 'mod/movie.php';
+            break;
       default:
             require_once 'mod/home.php';
     }

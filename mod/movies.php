@@ -209,6 +209,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                 <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['genres']); ?></td>
                                 <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['title_type']); ?></td>
                                 <td>
+                                    <a class="btn btn-sm btn-outline-secondary me-1" href="?mod=movie&amp;const=<?php echo urlencode($m['const']); ?>">Details</a>
                                     <?php if (!empty($m['url'])): ?>
                                         <a class="btn btn-sm btn-outline-primary" href="<?php echo h($m['url']); ?>" target="_blank" rel="noopener noreferrer">IMDb</a>
                                     <?php else: ?>

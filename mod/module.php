@@ -30,6 +30,9 @@ function loadModule($mod)
         case 'movie':
             require_once 'mod/movie.php';
             break;
+        case 'movies_actor':
+            require_once 'mod/movies_actor.php';
+            break;
       default:
             require_once 'mod/home.php';
     }

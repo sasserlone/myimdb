@@ -109,11 +109,12 @@ foreach ($principals as $p) {
                             <th>Kategorie</th>
                             <th>Charaktere</th>
                             <th>Job</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($cast)): ?>
-                            <tr><td colspan="5" class="text-center">Keine Schauspieler gefunden.</td></tr>
+                            <tr><td colspan="6" class="text-center">Keine Schauspieler gefunden.</td></tr>
                         <?php else: ?>
                             <?php foreach ($cast as $i => $p): ?>
                                 <tr>
@@ -130,6 +131,9 @@ foreach ($principals as $p) {
                                     </td>
                                     <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                         <?php echo h($p['job']); ?>
+                                    </td>
+                                    <td>
+                                        <a class="btn btn-sm btn-outline-info" href="?mod=movies_actor&amp;nconst=<?php echo urlencode($p['nconst']); ?>">Details</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -148,11 +152,12 @@ foreach ($principals as $p) {
                             <th>Kategorie</th>
                             <th>Charaktere / Funktion</th>
                             <th>Job</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($crew)): ?>
-                            <tr><td colspan="5" class="text-center">Keine weiteren Einträge.</td></tr>
+                            <tr><td colspan="6" class="text-center">Keine weiteren Einträge.</td></tr>
                         <?php else: ?>
                             <?php foreach ($crew as $i => $p): ?>
                                 <tr>
@@ -169,6 +174,9 @@ foreach ($principals as $p) {
                                     </td>
                                     <td style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                         <?php echo h($p['job']); ?>
+                                    </td>
+                                    <td>
+                                        <a class="btn btn-sm btn-outline-info" href="?mod=movies_actor&amp;nconst=<?php echo urlencode($p['nconst']); ?>">Details</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

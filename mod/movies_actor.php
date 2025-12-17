@@ -6,18 +6,13 @@ function h($s) {
 }
 
 $nconst = isset($_GET['nconst']) ? trim($_GET['nconst']) : '';
-$perPage = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 20;
-if ($perPage <= 0) $perPage = 20;
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-if ($page <= 0) $page = 1;
-$offset = ($page - 1) * $perPage;
 
 $pdo = getConnection();
 
 $actor = null;
-$movies = [];
-$total = 0;
-$pages = 0;
+$filmsMovies = [];
+$filmsSeriesEpisodes = [];
+$filmsOther = [];
 
 if ($nconst !== '') {
     // Actor info
@@ -26,31 +21,127 @@ if ($nconst !== '') {
     $actor = $stmtActor->fetch(PDO::FETCH_ASSOC);
 
     if ($actor) {
-        // Count total movies for this actor
-        $stmtCount = $pdo->prepare('
-            SELECT COUNT(DISTINCT mp.movie_id) as cnt
-            FROM movie_principals mp
-            WHERE mp.nconst = ?
-        ');
-        $stmtCount->execute([$nconst]);
-        $total = (int)$stmtCount->fetchColumn();
-        $pages = max(1, (int)ceil($total / $perPage));
-
-        // Get movies for this actor
+        // Get all movies for this actor with their categories
         $stmtMovies = $pdo->prepare('
-            SELECT DISTINCT m.*, mp.ordering, mp.category, mp.characters
+            SELECT m.*, 
+                   GROUP_CONCAT(DISTINCT mp.category ORDER BY mp.ordering SEPARATOR ", ") as all_categories,
+                   GROUP_CONCAT(DISTINCT mp.characters ORDER BY mp.ordering SEPARATOR ", ") as all_characters,
+                   GROUP_CONCAT(DISTINCT CASE WHEN mp.category IN ("actor", "actress", "self") THEN mp.category END ORDER BY mp.ordering SEPARATOR ", ") as acting_categories,
+                   GROUP_CONCAT(DISTINCT CASE WHEN mp.category NOT IN ("actor", "actress", "self") THEN mp.category END ORDER BY mp.ordering SEPARATOR ", ") as crew_categories
             FROM movies m
             INNER JOIN movie_principals mp ON mp.movie_id = m.id
             WHERE mp.nconst = ?
+            GROUP BY m.id
             ORDER BY m.year DESC, m.title ASC
-            LIMIT ? OFFSET ?
         ');
-        $stmtMovies->bindValue(1, $nconst);
-        $stmtMovies->bindValue(2, $perPage, PDO::PARAM_INT);
-        $stmtMovies->bindValue(3, $offset, PDO::PARAM_INT);
-        $stmtMovies->execute();
-        $movies = $stmtMovies->fetchAll(PDO::FETCH_ASSOC);
+        $stmtMovies->execute([$nconst]);
+        $allMovies = $stmtMovies->fetchAll(PDO::FETCH_ASSOC);
+
+        // Kategorisiere Filme nach title_type und vorhandenen Rollen
+        foreach ($allMovies as $m) {
+            $titleType = strtolower((string)($m['title_type'] ?? ''));
+            $hasActing = !empty($m['acting_categories']);
+            $hasCrew = !empty($m['crew_categories']);
+            
+            // Filme: Wenn Acting-Rolle vorhanden, mit allen Kategorien
+            if (!in_array($titleType, ['fernsehserie', 'miniserie', 'fernsehepisode']) && $hasActing) {
+                $filmsMovies[] = $m;
+            }
+            // Serien/Episoden: Wenn Acting-Rolle vorhanden, mit allen Kategorien
+            elseif (in_array($titleType, ['fernsehserie', 'miniserie', 'fernsehepisode']) && $hasActing) {
+                $filmsSeriesEpisodes[] = $m;
+            }
+            
+            // Sonstige Rollen: Nur wenn Crew-Rollen vorhanden (auch wenn Acting dabei ist)
+            if ($hasCrew) {
+                $filmsOther[] = $m;
+            }
+        }
     }
+}
+
+// Hilfsfunktion: Bekannt für-Zeichenkette mit Links formatieren
+function formatKnownForTitles($knownForTitles, $pdo) {
+    if (!$knownForTitles || $knownForTitles === '') {
+        return '';
+    }
+    
+    // Bekannt für ist eine komma-getrennte Liste von tconst
+    $tconstList = array_filter(array_map('trim', explode(',', $knownForTitles)));
+    
+    if (empty($tconstList)) {
+        return h($knownForTitles);
+    }
+    
+    // Filme aus der DB laden
+    $placeholders = implode(',', array_fill(0, count($tconstList), '?'));
+    $stmt = $pdo->prepare("SELECT id, const, title FROM movies WHERE const IN ($placeholders) ORDER BY FIELD(const, " . implode(',', array_fill(0, count($tconstList), '?')) . ")");
+    
+    $params = array_merge($tconstList, $tconstList);
+    $stmt->execute($params);
+    $movieMap = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $movieMap[$row['const']] = $row;
+    }
+    
+    // Links für bekannte Filme generieren
+    $links = [];
+    foreach ($tconstList as $tconst) {
+        if (isset($movieMap[$tconst])) {
+            $links[] = '<a href="?mod=movie&amp;const=' . urlencode($tconst) . '">' . h($movieMap[$tconst]['title']) . '</a>';
+        } else {
+            $links[] = h($tconst);
+        }
+    }
+    
+    return implode(', ', $links);
+}
+
+// Hilfsfunktion für Tabellendarstellung
+function renderMoviesTable($movies, $title, $showCrewOnly = false) {
+    if (empty($movies)) {
+        return;
+    }
+    ?>
+    <h4><?php echo $title; ?></h4>
+    <div class="table-responsive mb-4">
+        <table class="table table-striped table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Titel</th>
+                    <th>Jahr</th>
+                    <th class="text-end">IMDb</th>
+                    <th class="text-end">Votes</th>
+                    <th>Kategorie</th>
+                    <th>Charakter</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($movies as $i => $m): ?>
+                    <tr>
+                        <td><?php echo h($i + 1); ?></td>
+                        <td style="max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            <?php echo h($m['title']); ?>
+                        </td>
+                        <td><?php echo $m['year'] !== null ? h($m['year']) : ''; ?></td>
+                        <td class="text-end numeric"><?php echo $m['imdb_rating'] !== null ? h($m['imdb_rating']) : ''; ?></td>
+                        <td class="text-end numeric"><?php echo ($m['num_votes'] !== null && $m['num_votes'] !== '') ? h(number_format((int)$m['num_votes'], 0, ',', '.')) : ''; ?></td>
+                        <td><?php echo h($showCrewOnly ? $m['crew_categories'] : $m['all_categories']); ?></td>
+                        <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            <?php echo h($showCrewOnly ? '' : $m['all_characters']); ?>
+                        </td>
+                        <td>
+                            <a class="btn btn-sm btn-outline-secondary me-1" href="?mod=movie&amp;const=<?php echo urlencode($m['const']); ?>">Film</a>
+                            <a class="btn btn-sm btn-outline-primary" href="https://www.imdb.com/title/<?php echo h($m['const']); ?>/" target="_blank" rel="noopener noreferrer">IMDb</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php
 }
 
 ?>
@@ -75,105 +166,27 @@ if ($nconst !== '') {
                     <div class="row mb-2">
                         <div class="col-md-6">
                             <div><strong>Name:</strong> <?php echo h($actor['primary_name']); ?></div>
-                            <div><strong>nconst:</strong> <?php echo h($actor['nconst']); ?></div>
+                            <div><strong>nconst:</strong> <a href="https://www.imdb.com/name/<?php echo h($actor['nconst']); ?>/" target="_blank" rel="noopener noreferrer"><?php echo h($actor['nconst']); ?></a></div>
                             <div><strong>Geburtsyahr:</strong> <?php echo $actor['birth_year'] !== null ? h($actor['birth_year']) : ''; ?></div>
                             <div><strong>Todesjahr:</strong> <?php echo $actor['death_year'] !== null ? h($actor['death_year']) : ''; ?></div>
                         </div>
                         <div class="col-md-6">
                             <div><strong>Berufe:</strong> <?php echo h($actor['primary_profession']); ?></div>
-                            <div><strong>Bekannt für:</strong> <?php echo h($actor['known_for_titles']); ?></div>
+                            <div><strong>Bekannt für:</strong> <?php echo formatKnownForTitles($actor['known_for_titles'], $pdo); ?></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <h4>Filme (<?php echo $total; ?>)</h4>
+            <!-- Filme -->
+            <?php renderMoviesTable($filmsMovies, 'Filme (' . count($filmsMovies) . ')'); ?>
 
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>Titel</th>
-                            <th>Jahr</th>
-                            <th class="text-end">IMDb</th>
-                            <th class="text-end">Votes</th>
-                            <th>Kategorie</th>
-                            <th>Charakter</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($movies)): ?>
-                            <tr><td colspan="8" class="text-center">Keine Filme gefunden.</td></tr>
-                        <?php else: ?>
-                            <?php foreach ($movies as $i => $m): ?>
-                                <tr>
-                                    <td><?php echo h($offset + $i + 1); ?></td>
-                                    <td style="max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                        <?php echo h($m['title']); ?>
-                                    </td>
-                                    <td><?php echo $m['year'] !== null ? h($m['year']) : ''; ?></td>
-                                    <td class="text-end numeric"><?php echo $m['imdb_rating'] !== null ? h($m['imdb_rating']) : ''; ?></td>
-                                    <td class="text-end numeric"><?php echo ($m['num_votes'] !== null && $m['num_votes'] !== '') ? h(number_format((int)$m['num_votes'], 0, ',', '.')) : ''; ?></td>
-                                    <td><?php echo h($m['category']); ?></td>
-                                    <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                        <?php echo h($m['characters']); ?>
-                                    </td>
-                                    <td>
-                                        <a class="btn btn-sm btn-outline-secondary" href="?mod=movie&amp;const=<?php echo urlencode($m['const']); ?>">Film</a>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+            <!-- Serien / Episoden -->
+            <?php renderMoviesTable($filmsSeriesEpisodes, 'Serien / Episoden (' . count($filmsSeriesEpisodes) . ')'); ?>
 
-            <!-- Pagination -->
-            <nav aria-label="Seiten">
-                <ul class="pagination justify-content-center">
-                    <?php
-                    $baseUrl = '?mod=movies_actor&nconst=' . urlencode($nconst);
+            <!-- Sonstige Rollen -->
+            <?php renderMoviesTable($filmsOther, 'Sonstige Rollen (' . count($filmsOther) . ')', true); ?>
 
-                    // Previous
-                    if ($page > 1):
-                        ?><li class="page-item"><a class="page-link" href="<?php echo $baseUrl . '&page=1&per_page=' . $perPage; ?>">&laquo;</a></li><?php
-                    endif;
-
-                    $delta = 2;
-                    $start = max(1, $page - $delta);
-                    $end = min($pages, $page + $delta);
-
-                    if ($start > 1):
-                        ?><li class="page-item"><a class="page-link" href="<?php echo $baseUrl . '&page=1&per_page=' . $perPage; ?>">1</a></li><?php
-                        if ($start > 2):
-                            ?><li class="page-item disabled"><span class="page-link">...</span></li><?php
-                        endif;
-                    endif;
-
-                    for ($p = $start; $p <= $end; $p++):
-                        $active = $p === $page ? ' active' : '';
-                        ?>
-                        <li class="page-item<?php echo $active; ?>">
-                            <a class="page-link" href="<?php echo $baseUrl . '&page=' . $p . '&per_page=' . $perPage; ?>"><?php echo $p; ?></a>
-                        </li>
-                        <?php
-                    endfor;
-
-                    if ($end < $pages):
-                        if ($end < $pages - 1):
-                            ?><li class="page-item disabled"><span class="page-link">...</span></li><?php
-                        endif;
-                        ?><li class="page-item"><a class="page-link" href="<?php echo $baseUrl . '&page=' . $pages . '&per_page=' . $perPage; ?>"><?php echo $pages; ?></a></li><?php
-                    endif;
-
-                    if ($page < $pages):
-                        ?><li class="page-item"><a class="page-link" href="<?php echo $baseUrl . '&page=' . ($page + 1) . '&per_page=' . $perPage; ?>">&raquo;</a></li><?php
-                    endif;
-                    ?>
-                </ul>
-            </nav>
         <?php endif; ?>
     </div>
 </div>

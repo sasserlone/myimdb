@@ -26,6 +26,12 @@ if (!empty($_GET['genre'])) {
     $genreFilter = (int)$_GET['genre'];
 }
 
+// Actor-Filter
+$actorFilter = '';
+if (!empty($_GET['actor'])) {
+    $actorFilter = trim($_GET['actor']);
+}
+
 $pdo = getConnection();
 
 // Get all distinct genres from genres table
@@ -66,6 +72,16 @@ if ($titleTypeFilter !== '') {
 if ($genreFilter !== '') {
     $whereParts[] = 'EXISTS (SELECT 1 FROM movies_genres mg WHERE mg.movie_id = movies.id AND mg.genre_id = ?)';
     $params[] = (int)$genreFilter;
+}
+
+if ($actorFilter !== '') {
+    // Suche nach Schauspieler-Name oder nconst
+    $whereParts[] = 'EXISTS (SELECT 1 FROM movie_principals mp 
+                              INNER JOIN actors a ON a.nconst = mp.nconst 
+                              WHERE mp.movie_id = movies.id 
+                              AND (a.primary_name LIKE ? OR a.nconst LIKE ?))';
+    $params[] = "%$actorFilter%";
+    $params[] = "%$actorFilter%";
 }
 
 $whereClause = !empty($whereParts) ? 'WHERE ' . implode(' AND ', $whereParts) : '';
@@ -147,6 +163,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                     <option value="Miniserie" <?php echo $titleTypeFilter === 'Miniserie' ? 'selected' : ''; ?>>Miniserie</option>
                 </select>
                 <input class="form-control form-control-sm" type="search" name="q" placeholder="Suche Titel" value="<?php echo h($q); ?>">
+                <input class="form-control form-control-sm" type="search" name="actor" placeholder="Suche Schauspieler" value="<?php echo h($actorFilter); ?>">
                 <button class="btn btn-sm btn-primary ms-2">Suchen</button>
             </form>
         </div>
@@ -231,6 +248,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 if ($q !== '') $baseUrl .= '&q=' . urlencode($q);
                 if ($titleTypeFilter !== '') $baseUrl .= '&title_type=' . urlencode($titleTypeFilter);
                 if ($genreFilter !== '') $baseUrl .= '&genre=' . (int)$genreFilter;
+                if ($actorFilter !== '') $baseUrl .= '&actor=' . urlencode($actorFilter);
                 
                 // Previous-Link
                 if ($page > 1):

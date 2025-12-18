@@ -90,7 +90,8 @@ function formatKnownForTitles($knownForTitles, $pdo) {
         if (isset($movieMap[$tconst])) {
             $links[] = '<a href="?mod=movie&amp;const=' . urlencode($tconst) . '">' . h($movieMap[$tconst]['title']) . '</a>';
         } else {
-            $links[] = h($tconst);
+            // Film nicht in DB: Link zu IMDb
+            $links[] = '<a href="https://www.imdb.com/title/' . h($tconst) . '/" target="_blank" rel="noopener noreferrer">' . h($tconst) . '</a>';
         }
     }
     

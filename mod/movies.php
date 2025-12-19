@@ -32,6 +32,12 @@ if (!empty($_GET['actor'])) {
     $actorFilter = trim($_GET['actor']);
 }
 
+// View-Modus (table oder gallery)
+$viewMode = isset($_GET['view']) ? $_GET['view'] : 'table';
+if (!in_array($viewMode, ['table', 'gallery'])) {
+    $viewMode = 'table';
+}
+
 $pdo = getConnection();
 
 // Get all distinct genres from genres table
@@ -117,8 +123,11 @@ $ratedMovies = (int)($sumRow['rated_movies'] ?? 0);
 $totalRuntime = (int)($sumRow['total_runtime'] ?? 0);
 $ratedRuntime = (int)($sumRow['rated_runtime'] ?? 0);
 
-// Daten laden
-$selectSql = 'SELECT * FROM movies ' . $whereClause . ' ORDER BY title ASC LIMIT ? OFFSET ?';
+// Daten laden (inkl. parent_tconst für Episoden-Cover)
+$selectSql = 'SELECT movies.*, episodes.parent_tconst 
+              FROM movies 
+              LEFT JOIN episodes ON episodes.tconst = movies.const 
+              ' . $whereClause . ' ORDER BY title ASC LIMIT ? OFFSET ?';
 $stmt = $pdo->prepare($selectSql);
 $paramIndex = 1;
 foreach ($params as $param) {
@@ -130,6 +139,21 @@ $stmt->execute();
 
 $movies = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Genres für jeden Film laden
+foreach ($movies as &$movie) {
+    $genreStmt = $pdo->prepare('
+        SELECT g.name 
+        FROM genres g
+        INNER JOIN movies_genres mg ON mg.genre_id = g.id
+        WHERE mg.movie_id = ?
+        ORDER BY g.name
+    ');
+    $genreStmt->execute([$movie['id']]);
+    $genres = $genreStmt->fetchAll(PDO::FETCH_COLUMN);
+    $movie['genres_list'] = !empty($genres) ? implode(', ', $genres) : '';
+}
+unset($movie);
+
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
 ?>
@@ -138,16 +162,27 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>Filme</h2>
-            <form class="d-flex" method="get" style="gap:.5rem">
-                <input type="hidden" name="mod" value="movies">
-                <select class="form-select form-select-sm" name="genre" style="width: auto;">
-                    <option value="">Alle Genres</option>
-                    <?php foreach ($allGenres as $genreId => $label): ?>
-                        <option value="<?php echo (int)$genreId; ?>" <?php echo (int)$genreFilter === (int)$genreId ? 'selected' : ''; ?>><?php echo h($label); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <select class="form-select form-select-sm" name="title_type" style="width: auto;">
-                    <option value="">Alle Typen</option>
+            <div class="btn-group" role="group">
+                <a href="?mod=movies&view=table<?php echo ($q !== '' ? '&q=' . urlencode($q) : '') . ($titleTypeFilter !== '' ? '&title_type=' . urlencode($titleTypeFilter) : '') . ($genreFilter !== '' ? '&genre=' . (int)$genreFilter : '') . ($actorFilter !== '' ? '&actor=' . urlencode($actorFilter) : ''); ?>" class="btn btn-sm <?php echo $viewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'; ?>" title="Tabellenansicht">
+                    <i class="bi bi-list"></i> Tabelle
+                </a>
+                <a href="?mod=movies&view=gallery<?php echo ($q !== '' ? '&q=' . urlencode($q) : '') . ($titleTypeFilter !== '' ? '&title_type=' . urlencode($titleTypeFilter) : '') . ($genreFilter !== '' ? '&genre=' . (int)$genreFilter : '') . ($actorFilter !== '' ? '&actor=' . urlencode($actorFilter) : ''); ?>" class="btn btn-sm <?php echo $viewMode === 'gallery' ? 'btn-primary' : 'btn-outline-primary'; ?>" title="Galerieansicht">
+                    <i class="bi bi-grid"></i> Galerie
+                </a>
+            </div>
+        </div>
+
+        <form class="d-flex mb-3" method="get" style="gap:.5rem">
+            <input type="hidden" name="mod" value="movies">
+            <input type="hidden" name="view" value="<?php echo h($viewMode); ?>">
+            <select class="form-select form-select-sm" name="genre" style="width: auto;">
+                <option value="">Alle Genres</option>
+                <?php foreach ($allGenres as $genreId => $label): ?>
+                    <option value="<?php echo (int)$genreId; ?>" <?php echo (int)$genreFilter === (int)$genreId ? 'selected' : ''; ?>><?php echo h($label); ?></option>
+                <?php endforeach; ?>
+            </select>
+            <select class="form-select form-select-sm" name="title_type" style="width: auto;">
+                <option value="">Alle Typen</option>
                     <option value="nur_filme" <?php echo $titleTypeFilter === 'nur_filme' ? 'selected' : ''; ?>>Nur Filme</option>
                     <option value="nur_serien" <?php echo $titleTypeFilter === 'nur_serien' ? 'selected' : ''; ?>>Nur Serien</option>
                     <option value="" disabled>──────────</option>
@@ -192,59 +227,125 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>#</th>
-                        <th>Const</th>
-                        <th>Titel</th>
-                        <th>Jahr</th>
-                        <th class="text-end">IMDb</th>
-                        <th class="text-end">Votes</th>
-                        <th class="text-end">MyRate</th>
-                        <th class="text-end">Laufzeit</th>
-                        <th>Genres</th>
-                        <th>Type</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($movies)): ?>
-                        <tr><td colspan="10" class="text-center">Keine Filme gefunden.</td></tr>
-                    <?php else: ?>
-                        <?php foreach ($movies as $i => $m): ?>
-                            <tr>
-                                <td><?php echo h($offset + $i + 1); ?></td>
-                                <td><?php echo h($m['const']); ?></td>
-                                <td><?php echo h($m['title']); ?></td>
-                                <td><?php echo h($m['year']); ?></td>
-                                <td class="text-end numeric"><?php echo $m['imdb_rating'] !== null ? h($m['imdb_rating']) : ''; ?></td>
-                                <td class="text-end numeric"><?php echo ($m['num_votes'] !== null && $m['num_votes'] !== '') ? h(number_format((int)$m['num_votes'], 0, ',', '.')) : ''; ?></td>
-                                <td class="text-end numeric"><?php echo $m['your_rating'] !== null ? h($m['your_rating']) : ''; ?></td>
-                                <td class="text-end numeric"><?php echo $m['runtime_mins'] !== null ? h($m['runtime_mins']) . ' min' : ''; ?></td>
-                                <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['genres']); ?></td>
-                                <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['title_type']); ?></td>
-                                <td>
-                                    <a class="btn btn-sm btn-outline-secondary me-1" href="?mod=movie&amp;const=<?php echo urlencode($m['const']); ?>">Details</a>
-                                    <?php if (!empty($m['url'])): ?>
-                                        <a class="btn btn-sm btn-outline-primary" href="<?php echo h($m['url']); ?>" target="_blank" rel="noopener noreferrer">IMDb</a>
-                                    <?php else: ?>
-                                        <span class="text-muted">—</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php if ($viewMode === 'table'): ?>
+            <!-- Tabellenansicht -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Const</th>
+                            <th>Titel</th>
+                            <th>Jahr</th>
+                            <th class="text-end">IMDb</th>
+                            <th class="text-end">Votes</th>
+                            <th class="text-end">MyRate</th>
+                            <th class="text-end">Laufzeit</th>
+                            <th>Genres</th>
+                            <th>Type</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($movies)): ?>
+                            <tr><td colspan="10" class="text-center">Keine Filme gefunden.</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($movies as $i => $m): ?>
+                                <tr>
+                                    <td><?php echo h($offset + $i + 1); ?></td>
+                                    <td><?php echo h($m['const']); ?></td>
+                                    <td><?php echo h($m['title']); ?></td>
+                                    <td><?php echo h($m['year']); ?></td>
+                                    <td class="text-end numeric"><?php echo $m['imdb_rating'] !== null ? h($m['imdb_rating']) : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo ($m['num_votes'] !== null && $m['num_votes'] !== '') ? h(number_format((int)$m['num_votes'], 0, ',', '.')) : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo $m['your_rating'] !== null ? h($m['your_rating']) : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo $m['runtime_mins'] !== null ? h($m['runtime_mins']) . ' min' : ''; ?></td>
+                                    <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['genres']); ?></td>
+                                    <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['title_type']); ?></td>
+                                    <td>
+                                        <a class="btn btn-sm btn-outline-secondary me-1" href="?mod=movie&amp;const=<?php echo urlencode($m['const']); ?>">Details</a>
+                                        <?php if (!empty($m['url'])): ?>
+                                            <a class="btn btn-sm btn-outline-primary" href="<?php echo h($m['url']); ?>" target="_blank" rel="noopener noreferrer">IMDb</a>
+                                        <?php else: ?>
+                                            <span class="text-muted">—</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <!-- Galerieansicht -->
+            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-3">
+                <?php if (empty($movies)): ?>
+                    <div class="col-12 text-center text-muted mt-5">
+                        <p>Keine Filme gefunden.</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($movies as $m): ?>
+                        <div class="col">
+                            <div class="card h-100 position-relative" style="overflow: hidden;">
+                                <?php 
+                                // Bei Episoden das Cover der Serie anzeigen
+                                $coverConst = !empty($m['parent_tconst']) ? $m['parent_tconst'] : $m['const'];
+                                $coverFile = __DIR__ . '/../cover/' . $coverConst . '.jpg';
+                                $hasCover = !empty($m['poster_url']) || file_exists($coverFile);
+                                ?>
+                                <?php if ($hasCover): ?>
+                                    <img src="<?php 
+                                        echo file_exists($coverFile) ? './cover/' . h($coverConst) . '.jpg' : h($m['poster_url']);
+                                    ?>" class="card-img-top" alt="<?php echo h($m['title']); ?>" style="height: 300px; object-fit: cover;">
+                                <?php else: ?>
+                                    <div class="card-img-top d-flex align-items-center justify-content-center" style="height: 300px; background: var(--card-bg); border-bottom: 1px solid var(--table-border);">
+                                        <span class="text-muted text-center" style="font-size: 0.9em; padding: 1rem;">Kein Cover</span>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="card-body d-flex flex-column">
+                                    <h6 class="card-title" style="font-size: 0.9em; line-height: 1.2; margin-bottom: 0.5rem;">
+                                        <a href="?mod=movie&amp;const=<?php echo urlencode($m['const']); ?>" style="text-decoration: none; color: inherit;">
+                                            <?php echo h(strlen($m['title']) > 50 ? substr($m['title'], 0, 47) . '...' : $m['title']); ?>
+                                        </a>
+                                    </h6>
+                                    <div class="small mb-2" style="color: var(--text-color);">
+                                        <span><?php echo h($m['year']); ?></span>
+                                        <?php if (!empty($m['genres_list'])): ?>
+                                            <br><small><?php echo h($m['genres_list']); ?></small>
+                                        <?php endif; ?>
+                                        <?php 
+                                            $hasRating = array_key_exists('imdb_rating', $m) && $m['imdb_rating'] !== null;
+                                            $hasVotes = array_key_exists('num_votes', $m) && $m['num_votes'] !== null && $m['num_votes'] !== '';
+                                        ?>
+                                        <?php if ($hasRating): ?>
+                                            <br><i class="bi bi-star-fill" style="color: gold;"></i> <?php echo h($m['imdb_rating']); ?>
+                                            <?php if ($hasVotes): ?>
+                                                <small>(<?php echo number_format((int)$m['num_votes'], 0, ',', '.'); ?>)</small>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                        <?php if ($m['your_rating'] !== null): ?>
+                                            <br><i class="bi bi-star" style="color: orange;"></i> <?php echo h($m['your_rating']); ?>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="mt-auto">
+                                        <a class="btn btn-sm btn-outline-secondary w-100 mb-2" href="?mod=movie&amp;const=<?php echo urlencode($m['const']); ?>">Details</a>
+                                        <?php if (!empty($m['url'])): ?>
+                                            <a class="btn btn-sm btn-outline-primary w-100" href="<?php echo h($m['url']); ?>" target="_blank" rel="noopener noreferrer">IMDb</a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         <!-- Pagination mit Ellipsis -->
-        <nav aria-label="Seiten">
+        <nav aria-label="Seiten" class="mt-4">
             <ul class="pagination justify-content-center">
                 <?php
-                $baseUrl = '?mod=movies';
+                $baseUrl = '?mod=movies&view=' . $viewMode;
                 if ($q !== '') $baseUrl .= '&q=' . urlencode($q);
                 if ($titleTypeFilter !== '') $baseUrl .= '&title_type=' . urlencode($titleTypeFilter);
                 if ($genreFilter !== '') $baseUrl .= '&genre=' . (int)$genreFilter;

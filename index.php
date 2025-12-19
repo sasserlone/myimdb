@@ -57,6 +57,8 @@ header('Content-Type: text/html; charset=utf-8');
                             <li><a class="dropdown-item" href="?mod=import">Import</a></li>
                             <li><a class="dropdown-item" href="?mod=import_movies">Filme</a></li>
                             <li><a class="dropdown-item" href="?mod=import_episodes">Episoden</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="?mod=import_covers">Cover</a></li>
                         </ul>
                     </li>
                     

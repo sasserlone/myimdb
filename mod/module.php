@@ -33,6 +33,9 @@ function loadModule($mod)
         case 'movies_actor':
             require_once 'mod/movies_actor.php';
             break;
+        case 'import_covers':
+            require_once 'mod/import_covers.php';
+            break;
       default:
             require_once 'mod/home.php';
     }

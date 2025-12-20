@@ -39,6 +39,12 @@ if (!empty($_GET['genre'])) {
     $genreFilter = (int)$_GET['genre'];
 }
 
+// View-Modus (table oder gallery)
+$viewMode = isset($_GET['view']) ? $_GET['view'] : 'table';
+if (!in_array($viewMode, ['table', 'gallery'])) {
+    $viewMode = 'table';
+}
+
 // Reset filter if requested
 if (isset($_GET['filter_reset'])) {
     $filterComplete = 0;
@@ -282,12 +288,21 @@ function formatMinutesToHours($minutes) {
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>Serien</h2>
+            <div class="btn-group" role="group">
+                <a href="?mod=series&view=table<?php echo ($q !== '' ? '&q=' . urlencode($q) : '') . ((int)$genreFilter !== 0 ? '&genre=' . (int)$genreFilter : '') . ($filterComplete ? '&filter_complete=1' : '') . ($filterPartial ? '&filter_partial=1' : '') . ($filterNew ? '&filter_new=1' : ''); ?>" class="btn btn-sm <?php echo $viewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'; ?>" title="Tabellenansicht">
+                    <i class="bi bi-list"></i> Tabelle
+                </a>
+                <a href="?mod=series&view=gallery<?php echo ($q !== '' ? '&q=' . urlencode($q) : '') . ((int)$genreFilter !== 0 ? '&genre=' . (int)$genreFilter : '') . ($filterComplete ? '&filter_complete=1' : '') . ($filterPartial ? '&filter_partial=1' : '') . ($filterNew ? '&filter_new=1' : ''); ?>" class="btn btn-sm <?php echo $viewMode === 'gallery' ? 'btn-primary' : 'btn-outline-primary'; ?>" title="Galerieansicht">
+                    <i class="bi bi-grid"></i> Galerie
+                </a>
+            </div>
         </div>
 
         <!-- Filter Buttons -->
         <div class="mb-3">
             <form method="get" class="d-flex gap-2 justify-content-between align-items-center">
                 <input type="hidden" name="mod" value="series">
+                <input type="hidden" name="view" value="<?php echo h($viewMode); ?>">
                 <!-- Hidden inputs to preserve filter state when using search/genre -->
                 <input type="hidden" name="filter_complete" value="<?php echo $filterComplete; ?>" id="hidden_filter_complete">
                 <input type="hidden" name="filter_partial" value="<?php echo $filterPartial; ?>" id="hidden_filter_partial">
@@ -366,71 +381,137 @@ function formatMinutesToHours($minutes) {
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>#</th>
-                        <th>Const</th>
-                        <th>Titel</th>
-                        <th>Jahr</th>
-                        <th class="text-end">IMDb</th>
-                        <th class="text-end">Votes</th>
-                        <th class="text-end">MyRate</th>
-                        <th class="text-end">Laufzeit</th>
-                        <th>Genres</th>
-                        <th class="text-end">Staffeln</th>
-                        <th class="text-end">Episoden</th>
-                        <th>Type</th>
-                        <th>Aktion</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($series)): ?>
-                        <tr><td colspan="13" class="text-center">Keine Serien gefunden.</td></tr>
-                    <?php else: ?>
-                        <?php foreach ($series as $i => $s): ?>
-                            <tr>
-                                <td><?php echo h($offset + $i + 1); ?></td>
-                                <td><?php echo h($s['const']); ?></td>
-                                <td><?php echo h($s['title']); ?></td>
-                                <td><?php echo h($s['year']); ?></td>
-                                <td class="text-end numeric"><?php echo $s['imdb_rating'] !== null ? h($s['imdb_rating']) : ''; ?></td>
-                                <td class="text-end numeric"><?php echo ($s['num_votes'] !== null && $s['num_votes'] !== '') ? h(number_format((int)$s['num_votes'], 0, ',', '.')) : ''; ?></td>
-                                <td class="text-end numeric"><?php echo $s['your_rating'] !== null ? h($s['your_rating']) : ''; ?></td>
-                                <td class="text-end numeric"><?php echo $s['runtime_mins'] !== null ? h($s['runtime_mins']) . ' min' : ''; ?></td>
-                                <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['genres']); ?></td>
-                                <td class="text-end numeric"><?php echo isset($s['season_count']) ? h($s['season_count']) : '0'; ?></td>
-                                <td class="text-end numeric"><?php 
-                                    $episodeCount = isset($s['episode_count']) ? (int)$s['episode_count'] : 0;
-                                    $episodeMoviesCount = isset($s['episode_movies_count']) ? (int)$s['episode_movies_count'] : 0;
-                                    echo h($episodeMoviesCount . '/' . $episodeCount);
-                                ?></td>
-                                <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['title_type']); ?></td>
-                                <td>
-                                    <a class="btn btn-sm btn-outline-primary" href="<?php echo '?mod=serie&const=' . urlencode($s['const']); ?>">Episoden</a>
-                                    <?php if (!empty($s['url'])): ?>
-                                        <a class="btn btn-sm btn-outline-primary" href="<?php echo h($s['url']); ?>" target="_blank" rel="noopener noreferrer">IMDb</a>
-                                    <?php else: ?>
-                                        <span class="text-muted">—</span>
-                                    <?php endif; ?>
-                                    <form method="post" style="display:inline;">
-                                        <input type="hidden" name="delete_series_id" value="<?php echo $s['id']; ?>">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Wirklich löschen? Die Serie und alle verknüpften Daten werden gelöscht.');">Löschen</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php if ($viewMode === 'table'): ?>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Const</th>
+                            <th>Titel</th>
+                            <th>Jahr</th>
+                            <th class="text-end">IMDb</th>
+                            <th class="text-end">Votes</th>
+                            <th class="text-end">MyRate</th>
+                            <th class="text-end">Laufzeit</th>
+                            <th>Genres</th>
+                            <th class="text-end">Staffeln</th>
+                            <th class="text-end">Episoden</th>
+                            <th>Type</th>
+                            <th>Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($series)): ?>
+                            <tr><td colspan="13" class="text-center">Keine Serien gefunden.</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($series as $i => $s): ?>
+                                <tr>
+                                    <td><?php echo h($offset + $i + 1); ?></td>
+                                    <td><?php echo h($s['const']); ?></td>
+                                    <td><?php echo h($s['title']); ?></td>
+                                    <td><?php echo h($s['year']); ?></td>
+                                    <td class="text-end numeric"><?php echo $s['imdb_rating'] !== null ? h($s['imdb_rating']) : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo ($s['num_votes'] !== null && $s['num_votes'] !== '') ? h(number_format((int)$s['num_votes'], 0, ',', '.')) : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo $s['your_rating'] !== null ? h($s['your_rating']) : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo $s['runtime_mins'] !== null ? h($s['runtime_mins']) . ' min' : ''; ?></td>
+                                    <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['genres']); ?></td>
+                                    <td class="text-end numeric"><?php echo isset($s['season_count']) ? h($s['season_count']) : '0'; ?></td>
+                                    <td class="text-end numeric"><?php 
+                                        $episodeCount = isset($s['episode_count']) ? (int)$s['episode_count'] : 0;
+                                        $episodeMoviesCount = isset($s['episode_movies_count']) ? (int)$s['episode_movies_count'] : 0;
+                                        echo h($episodeMoviesCount . '/' . $episodeCount);
+                                    ?></td>
+                                    <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($s['title_type']); ?></td>
+                                    <td>
+                                        <a class="btn btn-sm btn-outline-primary" href="<?php echo '?mod=serie&const=' . urlencode($s['const']); ?>">Episoden</a>
+                                        <?php if (!empty($s['url'])): ?>
+                                            <a class="btn btn-sm btn-outline-primary" href="<?php echo h($s['url']); ?>" target="_blank" rel="noopener noreferrer">IMDb</a>
+                                        <?php else: ?>
+                                            <span class="text-muted">—</span>
+                                        <?php endif; ?>
+                                        <form method="post" style="display:inline;">
+                                            <input type="hidden" name="delete_series_id" value="<?php echo $s['id']; ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Wirklich löschen? Die Serie und alle verknüpften Daten werden gelöscht.');">Löschen</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <!-- Galerieansicht -->
+            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-3">
+                <?php if (empty($series)): ?>
+                    <div class="col-12 text-center text-muted mt-5">
+                        <p>Keine Serien gefunden.</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($series as $s): ?>
+                        <?php 
+                            $coverFile = __DIR__ . '/../cover/' . $s['const'] . '.jpg';
+                            $hasCover = (!empty($s['poster_url']) || file_exists($coverFile));
+                            $episodeCount = isset($s['episode_count']) ? (int)$s['episode_count'] : 0;
+                            $episodeMoviesCount = isset($s['episode_movies_count']) ? (int)$s['episode_movies_count'] : 0;
+                        ?>
+                        <div class="col">
+                            <div class="card h-100 position-relative" style="overflow: hidden;">
+                                <?php if ($hasCover): ?>
+                                    <img src="<?php echo file_exists($coverFile) ? './cover/' . h($s['const']) . '.jpg' : h($s['poster_url']); ?>" class="card-img-top" alt="<?php echo h($s['title']); ?>" style="height: 300px; object-fit: cover;">
+                                <?php else: ?>
+                                    <div class="card-img-top d-flex align-items-center justify-content-center" style="height: 300px; background: var(--card-bg); border-bottom: 1px solid var(--table-border);">
+                                        <span class="text-muted text-center" style="font-size: 0.9em; padding: 1rem;">Kein Cover</span>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="card-body d-flex flex-column">
+                                    <h6 class="card-title" style="font-size: 0.9em; line-height: 1.2; margin-bottom: 0.5rem;">
+                                        <a href="?mod=serie&amp;const=<?php echo urlencode($s['const']); ?>" style="text-decoration: none; color: inherit;">
+                                            <?php echo h(strlen($s['title']) > 50 ? substr($s['title'], 0, 47) . '...' : $s['title']); ?>
+                                        </a>
+                                    </h6>
+                                    <div class="small mb-2" style="color: var(--text-color);">
+                                        <span><?php echo h($s['year']); ?></span>
+                                        <?php if (!empty($s['genres'])): ?>
+                                            <br><small><?php echo h($s['genres']); ?></small>
+                                        <?php endif; ?>
+                                        <?php 
+                                            $hasRating = array_key_exists('imdb_rating', $s) && $s['imdb_rating'] !== null;
+                                            $hasVotes = array_key_exists('num_votes', $s) && $s['num_votes'] !== null && $s['num_votes'] !== '';
+                                        ?>
+                                        <?php if ($hasRating): ?>
+                                            <br><i class="bi bi-star-fill" style="color: gold;"></i> <?php echo h($s['imdb_rating']); ?>
+                                            <?php if ($hasVotes): ?>
+                                                <small>(<?php echo number_format((int)$s['num_votes'], 0, ',', '.'); ?>)</small>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                        <?php if ($s['your_rating'] !== null): ?>
+                                            <br><i class="bi bi-star" style="color: orange;"></i> <?php echo h($s['your_rating']); ?>
+                                        <?php endif; ?>
+                                        <?php if ($episodeCount > 0): ?>
+                                            <br><small>Episoden: <?php echo h($episodeMoviesCount . '/' . $episodeCount); ?></small>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="mt-auto">
+                                        <a class="btn btn-sm btn-outline-secondary w-100 mb-2" href="?mod=serie&amp;const=<?php echo urlencode($s['const']); ?>">Episoden</a>
+                                        <?php if (!empty($s['url'])): ?>
+                                            <a class="btn btn-sm btn-outline-primary w-100" href="<?php echo h($s['url']); ?>" target="_blank" rel="noopener noreferrer">IMDb</a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         <!-- Pagination mit Ellipsis -->
         <nav aria-label="Seiten">
             <ul class="pagination justify-content-center">
                 <?php
-                $baseUrl = '?mod=series';
+                $baseUrl = '?mod=series&view=' . $viewMode;
                 if ($q !== '') $baseUrl .= '&q=' . urlencode($q);
                 if ((int)$genreFilter !== 0) $baseUrl .= '&genre=' . (int)$genreFilter;
                 if ($filterComplete) $baseUrl .= '&filter_complete=1';

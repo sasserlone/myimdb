@@ -84,6 +84,21 @@ foreach ($principals as $p) {
                                 }
                             ?></div>
                             <div><strong>Meine Bewertung:</strong> <?php echo $movie['your_rating'] !== null ? h($movie['your_rating']) : ''; ?></div>
+                            <?php if (!empty($movie['metascore']) || !empty($movie['metacritic_score']) || !empty($movie['rotten_tomatoes'])): ?>
+                                <div><strong>Critics:</strong>
+                                    <?php if (!empty($movie['metascore'])): ?>
+                                        Metascore: <?php echo h($movie['metascore']); ?>
+                                    <?php endif; ?>
+                                    <?php if (!empty($movie['metacritic_score'])): ?>
+                                        <?php if (!empty($movie['metascore'])): ?> · <?php endif; ?>
+                                        Metacritic: <?php echo h($movie['metacritic_score']); ?>/100
+                                    <?php endif; ?>
+                                    <?php if (!empty($movie['rotten_tomatoes'])): ?>
+                                        <?php if (!empty($movie['metascore']) || !empty($movie['metacritic_score'])): ?> · <?php endif; ?>
+                                        Rotten: <?php echo h($movie['rotten_tomatoes']); ?>%
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
                             <div><strong>Link:</strong> <?php if (!empty($movie['url'])): ?>
                                 <a href="<?php echo h($movie['url']); ?>" target="_blank" rel="noopener noreferrer">IMDb öffnen</a>
                             <?php else: ?>
@@ -91,6 +106,24 @@ foreach ($principals as $p) {
                             <?php endif; ?></div>
                         </div>
                     </div>
+                    <?php if (!empty($movie['plot']) || !empty($movie['language']) || !empty($movie['country'])): ?>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <?php if (!empty($movie['plot'])): ?>
+                                    <div class="mb-2"><strong>Plot:</strong><br><?php echo nl2br(h($movie['plot'])); ?></div>
+                                <?php endif; ?>
+                                <div class="text-muted" style="font-size: 0.95em;">
+                                    <?php if (!empty($movie['language'])): ?>
+                                        <span><strong>Sprache:</strong> <?php echo h($movie['language']); ?></span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($movie['country'])): ?>
+                                        <?php if (!empty($movie['language'])): ?> · <?php endif; ?>
+                                        <span><strong>Land:</strong> <?php echo h($movie['country']); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 

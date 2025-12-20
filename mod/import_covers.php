@@ -61,8 +61,8 @@ function downloadCover($tconst, $title, $pdo, $coverDir, $existingPosterUrl = nu
 
 // Verarbeite Batch-Import bei POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'batch_import') {
-    // Hole alle Nicht-Episoden (wir entscheiden später, was wirklich fehlt)
-    $stmt = $pdo->query('SELECT id, const, title, poster_url FROM movies WHERE title_type != "Fernsehepisode" AND (POSTER_URL IS NULL OR POSTER_URL = "") ORDER BY year DESC, title ASC');
+    // Hole alle Nicht-Episoden
+    $stmt = $pdo->query('SELECT id, const, title, poster_url FROM movies WHERE title_type != "Fernsehepisode" ORDER BY year DESC, title ASC');
     $movies = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     $successCount = 0;
@@ -70,22 +70,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $errorCount = 0;
     $errors = [];
 
-    // Vorab: Filme mit bestehender Datei herausfiltern (werden als übersprungen gezählt)
+    // Filter: Nur Filme ohne lokale Datei verarbeiten
     $pending = [];
     foreach ($movies as $movie) {
         $coverFile = $coverDir . '/' . $movie['const'] . '.jpg';
-        if (file_exists($coverFile)) {
-            $skipCount++;
-            continue;
+        if (!file_exists($coverFile)) {
+            $pending[] = $movie;
         }
-        $pending[] = $movie;
     }
 
     $totalCount = count($pending);
 
     // Nichts zu tun
     if ($totalCount === 0) {
-        echo '<div class="alert alert-success">Keine Filme ohne Cover gefunden.</div>';
+        echo '<div class="alert alert-success">Keine Filme ohne lokale Datei gefunden.</div>';
         echo '<a href="?mod=import_covers" class="btn btn-primary">Zurück</a>';
         exit;
     }
@@ -109,23 +107,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     foreach ($pending as $index => $movie) {
         $percent = (int)(($index + 1) / $totalCount * 100);
         
-        // Prüfe ob bereits geladen (DB oder Datei)
-        $coverFile = $coverDir . '/' . $movie['const'] . '.jpg';
-        if (file_exists($coverFile)) {
-            $skipCount++;
+        $existingPoster = !empty($movie['poster_url']) ? $movie['poster_url'] : null;
+        list($success, $msg) = downloadCover($movie['const'], $movie['title'], $pdo, $coverDir, $existingPoster);
+        if ($success) {
+            $successCount++;
         } else {
-            $existingPoster = !empty($movie['poster_url']) ? $movie['poster_url'] : null;
-            list($success, $msg) = downloadCover($movie['const'], $movie['title'], $pdo, $coverDir, $existingPoster);
-            if ($success) {
-                $successCount++;
+            // Wenn kein Poster verfügbar -> als übersprungen werten, nicht als Fehler
+            if ($msg === 'Kein Poster verfügbar') {
+                $skipCount++;
             } else {
-                // Wenn kein Poster verfügbar -> als übersprungen werten, nicht als Fehler
-                if ($msg === 'Kein Poster verfügbar') {
-                    $skipCount++;
-                } else {
-                    $errorCount++;
-                    $errors[] = "{$movie['title']}: $msg";
-                }
+                $errorCount++;
+                $errors[] = "{$movie['title']}: $msg";
             }
         }
         
@@ -164,9 +156,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit;
 }
 
-// Zähle Filme ohne Cover (ohne Episoden)
-$stmtNoCover = $pdo->query('SELECT COUNT(*) FROM movies WHERE (poster_url IS NULL OR poster_url = "") AND title_type != "Fernsehepisode"');
-$noCoverCount = (int)$stmtNoCover->fetchColumn();
+// Zähle tatsächlich zu importierende Filme (ohne lokale Dateien)
+$stmtAll = $pdo->query('SELECT const FROM movies WHERE title_type != "Fernsehepisode" ORDER BY year DESC, title ASC');
+$allMovies = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
+$noCoverCount = 0;
+foreach ($allMovies as $movie) {
+    $coverFile = $coverDir . '/' . $movie['const'] . '.jpg';
+    if (!file_exists($coverFile)) {
+        $noCoverCount++;
+    }
+}
 
 $stmtTotal = $pdo->query('SELECT COUNT(*) FROM movies WHERE title_type != "Fernsehepisode"');
 $totalCount = (int)$stmtTotal->fetchColumn();

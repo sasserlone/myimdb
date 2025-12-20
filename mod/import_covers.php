@@ -118,6 +118,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             } else {
                 $errorCount++;
                 $errors[] = "{$movie['title']}: $msg";
+                // Dummy-Cover markieren, damit dieser Film nicht erneut versucht wird
+                $stmtDummy = $pdo->prepare('UPDATE movies SET poster_url = "./cover/dummy.jpg" WHERE const = ?');
+                $stmtDummy->execute([$movie['const']]);
             }
         }
         

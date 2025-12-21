@@ -111,7 +111,7 @@ if (empty($whereParts)) {
 
 // Daten laden
 $selectSql = 'SELECT on1.id, on1.imdb_const, on1.tmdb_id, on1.nominated, on1.winner,
-              oa.year, oc.name AS category_name, oc.german AS category_german,
+              oa.year, oc.german AS category_german,
               m.title, m.year AS movie_year, m.url
               FROM oscar_nominations on1
               INNER JOIN oscar_awards oa ON oa.id = on1.award_id
@@ -196,7 +196,6 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                         <th>#</th>
                         <th>Jahr</th>
                         <th>Kategorie</th>
-                        <th>German</th>
                         <th>Nominierte</th>
                         <th>Film</th>
                         <th class="text-center">Status</th>
@@ -205,13 +204,12 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 </thead>
                 <tbody>
                     <?php if (empty($oscars)): ?>
-                        <tr><td colspan="8" class="text-center">Keine Einträge gefunden.</td></tr>
+                        <tr><td colspan="7" class="text-center">Keine Einträge gefunden.</td></tr>
                     <?php else: ?>
                         <?php foreach ($oscars as $i => $o): ?>
                             <tr <?php echo $o['winner'] ? 'style="background-color: rgba(255, 215, 0, 0.1);"' : ''; ?>>
                                 <td><?php echo h($offset + $i + 1); ?></td>
                                 <td><?php echo h($o['year']); ?></td>
-                                <td><?php echo h($o['category_name']); ?></td>
                                 <td><?php echo !empty($o['category_german']) ? h($o['category_german']) : '<span class="text-muted">—</span>'; ?></td>
                                 <td><?php echo h($o['nominated']); ?></td>
                                 <td>

@@ -114,6 +114,9 @@ function renderMoviesTable($movies, $title, $showCrewOnly = false) {
                     <th>Jahr</th>
                     <th class="text-end">IMDb</th>
                     <th class="text-end">Votes</th>
+                    <th class="text-end">MyRate</th>
+                    <th class="text-end">Meta</th>
+                    <th class="text-end">Rotten</th>
                     <th>Kategorie</th>
                     <th>Charakter</th>
                     <th></th>
@@ -129,6 +132,9 @@ function renderMoviesTable($movies, $title, $showCrewOnly = false) {
                         <td><?php echo $m['year'] !== null ? h($m['year']) : ''; ?></td>
                         <td class="text-end numeric"><?php echo $m['imdb_rating'] !== null ? h($m['imdb_rating']) : ''; ?></td>
                         <td class="text-end numeric"><?php echo ($m['num_votes'] !== null && $m['num_votes'] !== '') ? h(number_format((int)$m['num_votes'], 0, ',', '.')) : ''; ?></td>
+                        <td class="text-end numeric"><?php echo $m['your_rating'] !== null ? h($m['your_rating']) : ''; ?></td>
+                        <td class="text-end numeric"><?php echo !empty($m['metascore']) ? h($m['metascore']) : ''; ?></td>
+                        <td class="text-end numeric"><?php echo !empty($m['rotten_tomatoes']) ? h($m['rotten_tomatoes']) . '%' : ''; ?></td>
                         <td><?php echo h($showCrewOnly ? $m['crew_categories'] : $m['all_categories']); ?></td>
                         <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             <?php echo h($showCrewOnly ? '' : $m['all_characters']); ?>

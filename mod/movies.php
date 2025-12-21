@@ -32,6 +32,15 @@ if (!empty($_GET['actor'])) {
     $actorFilter = trim($_GET['actor']);
 }
 
+// Rating-Filter (all, rated, unrated)
+$ratingFilter = '';
+if (!empty($_GET['rating'])) {
+    $ratingFilter = trim($_GET['rating']);
+}
+if (!in_array($ratingFilter, ['rated', 'unrated'])) {
+    $ratingFilter = '';
+}
+
 // View-Modus (table oder gallery)
 $viewMode = isset($_GET['view']) ? $_GET['view'] : 'table';
 if (!in_array($viewMode, ['table', 'gallery'])) {
@@ -88,6 +97,12 @@ if ($actorFilter !== '') {
                               AND (a.primary_name LIKE ? OR a.nconst LIKE ?))';
     $params[] = "%$actorFilter%";
     $params[] = "%$actorFilter%";
+}
+
+if ($ratingFilter === 'rated') {
+    $whereParts[] = 'your_rating IS NOT NULL AND your_rating > 0';
+} elseif ($ratingFilter === 'unrated') {
+    $whereParts[] = '(your_rating IS NULL OR your_rating = 0)';
 }
 
 $whereClause = !empty($whereParts) ? 'WHERE ' . implode(' AND ', $whereParts) : '';
@@ -163,10 +178,10 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>Filme</h2>
             <div class="btn-group" role="group">
-                <a href="?mod=movies&view=table<?php echo ($q !== '' ? '&q=' . urlencode($q) : '') . ($titleTypeFilter !== '' ? '&title_type=' . urlencode($titleTypeFilter) : '') . ($genreFilter !== '' ? '&genre=' . (int)$genreFilter : '') . ($actorFilter !== '' ? '&actor=' . urlencode($actorFilter) : ''); ?>" class="btn btn-sm <?php echo $viewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'; ?>" title="Tabellenansicht">
+                <a href="?mod=movies&view=table<?php echo ($q !== '' ? '&q=' . urlencode($q) : '') . ($titleTypeFilter !== '' ? '&title_type=' . urlencode($titleTypeFilter) : '') . ($genreFilter !== '' ? '&genre=' . (int)$genreFilter : '') . ($actorFilter !== '' ? '&actor=' . urlencode($actorFilter) : '') . ($ratingFilter !== '' ? '&rating=' . urlencode($ratingFilter) : ''); ?>" class="btn btn-sm <?php echo $viewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'; ?>" title="Tabellenansicht">
                     <i class="bi bi-list"></i> Tabelle
                 </a>
-                <a href="?mod=movies&view=gallery<?php echo ($q !== '' ? '&q=' . urlencode($q) : '') . ($titleTypeFilter !== '' ? '&title_type=' . urlencode($titleTypeFilter) : '') . ($genreFilter !== '' ? '&genre=' . (int)$genreFilter : '') . ($actorFilter !== '' ? '&actor=' . urlencode($actorFilter) : ''); ?>" class="btn btn-sm <?php echo $viewMode === 'gallery' ? 'btn-primary' : 'btn-outline-primary'; ?>" title="Galerieansicht">
+                <a href="?mod=movies&view=gallery<?php echo ($q !== '' ? '&q=' . urlencode($q) : '') . ($titleTypeFilter !== '' ? '&title_type=' . urlencode($titleTypeFilter) : '') . ($genreFilter !== '' ? '&genre=' . (int)$genreFilter : '') . ($actorFilter !== '' ? '&actor=' . urlencode($actorFilter) : '') . ($ratingFilter !== '' ? '&rating=' . urlencode($ratingFilter) : ''); ?>" class="btn btn-sm <?php echo $viewMode === 'gallery' ? 'btn-primary' : 'btn-outline-primary'; ?>" title="Galerieansicht">
                     <i class="bi bi-grid"></i> Galerie
                 </a>
             </div>
@@ -196,6 +211,11 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                     <option value="Fernsehserie" <?php echo $titleTypeFilter === 'Fernsehserie' ? 'selected' : ''; ?>>Fernsehserie</option>
                     <option value="Fernsehspecial" <?php echo $titleTypeFilter === 'Fernsehspecial' ? 'selected' : ''; ?>>Fernsehspecial</option>
                     <option value="Miniserie" <?php echo $titleTypeFilter === 'Miniserie' ? 'selected' : ''; ?>>Miniserie</option>
+                </select>
+                <select class="form-select form-select-sm" name="rating" style="width: auto;">
+                    <option value="">Alle Ratings</option>
+                    <option value="rated" <?php echo $ratingFilter === 'rated' ? 'selected' : ''; ?>>Bewertet</option>
+                    <option value="unrated" <?php echo $ratingFilter === 'unrated' ? 'selected' : ''; ?>>Nicht bewertet</option>
                 </select>
                 <input class="form-control form-control-sm" type="search" name="q" placeholder="Suche Titel" value="<?php echo h($q); ?>">
                 <input class="form-control form-control-sm" type="search" name="actor" placeholder="Suche Schauspieler" value="<?php echo h($actorFilter); ?>">
@@ -239,7 +259,10 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                             <th>Jahr</th>
                             <th class="text-end">IMDb</th>
                             <th class="text-end">Votes</th>
+                            <th class="text-end">Meta</th>
+                            <th class="text-end">Rotten</th>
                             <th class="text-end">MyRate</th>
+                            <th class="text-center">Oscar</th>
                             <th class="text-end">Laufzeit</th>
                             <th>Genres</th>
                             <th>Type</th>
@@ -248,7 +271,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                     </thead>
                     <tbody>
                         <?php if (empty($movies)): ?>
-                            <tr><td colspan="10" class="text-center">Keine Filme gefunden.</td></tr>
+                            <tr><td colspan="14" class="text-center">Keine Filme gefunden.</td></tr>
                         <?php else: ?>
                             <?php foreach ($movies as $i => $m): ?>
                                 <tr>
@@ -258,7 +281,16 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                     <td><?php echo h($m['year']); ?></td>
                                     <td class="text-end numeric"><?php echo $m['imdb_rating'] !== null ? h($m['imdb_rating']) : ''; ?></td>
                                     <td class="text-end numeric"><?php echo ($m['num_votes'] !== null && $m['num_votes'] !== '') ? h(number_format((int)$m['num_votes'], 0, ',', '.')) : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo !empty($m['metascore']) ? h($m['metascore']) : ''; ?></td>
+                                    <td class="text-end numeric"><?php echo !empty($m['rotten_tomatoes']) ? h($m['rotten_tomatoes']) . '%' : ''; ?></td>
                                     <td class="text-end numeric"><?php echo $m['your_rating'] !== null ? h($m['your_rating']) : ''; ?></td>
+                                    <td class="text-center">
+                                        <?php if ($m['oscar_winner']): ?>
+                                            <span title="Oscar-Gewinner <?php echo h($m['oscar_year']); ?>">🏆</span>
+                                        <?php elseif ($m['oscar_nominations'] > 0): ?>
+                                            <span title="<?php echo h($m['oscar_nominations']); ?> Nominierungen" style="cursor: help;">📋</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td class="text-end numeric"><?php echo $m['runtime_mins'] !== null ? h($m['runtime_mins']) . ' min' : ''; ?></td>
                                     <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['genres']); ?></td>
                                     <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['title_type']); ?></td>
@@ -350,6 +382,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 if ($titleTypeFilter !== '') $baseUrl .= '&title_type=' . urlencode($titleTypeFilter);
                 if ($genreFilter !== '') $baseUrl .= '&genre=' . (int)$genreFilter;
                 if ($actorFilter !== '') $baseUrl .= '&actor=' . urlencode($actorFilter);
+                if ($ratingFilter !== '') $baseUrl .= '&rating=' . urlencode($ratingFilter);
                 
                 // Previous-Link
                 if ($page > 1):

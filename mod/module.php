@@ -18,6 +18,9 @@ function loadModule($mod)
         case 'import_episodes':
             require_once 'mod/import_episodes.php';
             break;
+        case 'oscars':
+            require_once 'mod/oscars.php';
+            break;
         case 'movies':
             require_once 'mod/movies.php';
             break;

@@ -262,7 +262,6 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                             <th class="text-end">Meta</th>
                             <th class="text-end">Rotten</th>
                             <th class="text-end">MyRate</th>
-                            <th class="text-center">Oscar</th>
                             <th class="text-end">Laufzeit</th>
                             <th>Genres</th>
                             <th>Type</th>
@@ -271,7 +270,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                     </thead>
                     <tbody>
                         <?php if (empty($movies)): ?>
-                            <tr><td colspan="14" class="text-center">Keine Filme gefunden.</td></tr>
+                            <tr><td colspan="13" class="text-center">Keine Filme gefunden.</td></tr>
                         <?php else: ?>
                             <?php foreach ($movies as $i => $m): ?>
                                 <tr>
@@ -284,13 +283,6 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                     <td class="text-end numeric"><?php echo !empty($m['metascore']) ? h($m['metascore']) : ''; ?></td>
                                     <td class="text-end numeric"><?php echo !empty($m['rotten_tomatoes']) ? h($m['rotten_tomatoes']) . '%' : ''; ?></td>
                                     <td class="text-end numeric"><?php echo $m['your_rating'] !== null ? h($m['your_rating']) : ''; ?></td>
-                                    <td class="text-center">
-                                        <?php if ($m['oscar_winner']): ?>
-                                            <span title="Oscar-Gewinner <?php echo h($m['oscar_year']); ?>">🏆</span>
-                                        <?php elseif ($m['oscar_nominations'] > 0): ?>
-                                            <span title="<?php echo h($m['oscar_nominations']); ?> Nominierungen" style="cursor: help;">📋</span>
-                                        <?php endif; ?>
-                                    </td>
                                     <td class="text-end numeric"><?php echo $m['runtime_mins'] !== null ? h($m['runtime_mins']) . ' min' : ''; ?></td>
                                     <td style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['genres']); ?></td>
                                     <td style="max-width:180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?php echo h($m['title_type']); ?></td>

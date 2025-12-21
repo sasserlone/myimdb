@@ -46,6 +46,9 @@ header('Content-Type: text/html; charset=utf-8');
                     <li class="nav-item">
                         <a class="nav-link <?=($mod == 'series') ? 'active' : '';?>" href="?mod=series">Serien</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?=($mod == 'oscars') ? 'active' : '';?>" href="?mod=oscars">Oscars</a>
+                    </li>
             
                     <!-- Dropdown Menü für Imports -->
                     <li class="nav-item dropdown">

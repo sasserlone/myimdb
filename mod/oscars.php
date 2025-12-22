@@ -36,7 +36,7 @@ if (!empty($_GET['q'])) {
 $pdo = getConnection();
 
 // Get all distinct years
-$yearStmt = $pdo->query('SELECT DISTINCT year FROM oscar_awards ORDER BY year DESC');
+$yearStmt = $pdo->query('SELECT DISTINCT year FROM oscar_nominations ORDER BY year DESC');
 $allYears = $yearStmt->fetchAll(PDO::FETCH_COLUMN);
 
 // Get all distinct categories
@@ -51,7 +51,7 @@ $whereParts = [];
 $params = [];
 
 if ($yearFilter !== '') {
-    $whereParts[] = 'oa.year = ?';
+    $whereParts[] = 'on1.year = ?';
     $params[] = $yearFilter;
 }
 
@@ -75,7 +75,6 @@ $whereClause = !empty($whereParts) ? 'WHERE ' . implode(' AND ', $whereParts) : 
 
 // Gesamtanzahl ermitteln - OHNE movies JOIN für Performance
 $countSql = 'SELECT COUNT(*) FROM oscar_nominations on1
-             INNER JOIN oscar_awards oa ON oa.id = on1.award_id
              ' . $whereClause;
 if (!empty($params)) {
     $stmtCount = $pdo->prepare($countSql);
@@ -99,7 +98,7 @@ if (empty($whereParts)) {
     $totalNominations = (int)($statsRow['total_nominations'] ?? 0);
     $totalWinners = (int)($statsRow['total_winners'] ?? 0);
     
-    $totalYears = $pdo->query('SELECT COUNT(DISTINCT year) FROM oscar_awards')->fetchColumn();
+    $totalYears = $pdo->query('SELECT COUNT(DISTINCT year) FROM oscar_nominations')->fetchColumn();
     $totalCategories = $pdo->query('SELECT COUNT(*) FROM oscar_category')->fetchColumn();
 } else {
     // Bei aktiven Filtern: verwende die gezählten Ergebnisse
@@ -109,16 +108,13 @@ if (empty($whereParts)) {
     $totalCategories = 0;
 }
 
-// Daten laden
-$selectSql = 'SELECT on1.id, on1.imdb_const, on1.tmdb_id, on1.nominated, on1.winner,
-              oa.year, oc.german AS category_german,
-              m.title, m.year AS movie_year, m.url
+// Daten laden - OHNE movies JOIN für bessere Performance
+$selectSql = 'SELECT on1.id, on1.imdb_const, on1.tmdb_id, on1.nominated, on1.winner, on1.year,
+              oc.german AS category_german
               FROM oscar_nominations on1
-              INNER JOIN oscar_awards oa ON oa.id = on1.award_id
               INNER JOIN oscar_category oc ON oc.id = on1.category_id
-              LEFT JOIN movies m ON m.const COLLATE utf8mb4_general_ci = on1.imdb_const
               ' . $whereClause . ' 
-              ORDER BY oa.year DESC, oc.name ASC, on1.winner DESC, on1.nominated ASC
+              ORDER BY on1.year DESC, oc.name ASC, on1.winner DESC, on1.nominated ASC
               LIMIT ? OFFSET ?';
 $stmt = $pdo->prepare($selectSql);
 $paramIndex = 1;
@@ -130,6 +126,33 @@ $stmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
 $stmt->execute();
 
 $oscars = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Film-Informationen separat laden für die aktuell angezeigten Einträge
+$imdbConsts = array_filter(array_unique(array_column($oscars, 'imdb_const')));
+$moviesData = [];
+if (!empty($imdbConsts)) {
+    $imdbConsts = array_values($imdbConsts); // Re-index array
+    $placeholders = str_repeat('?,', count($imdbConsts) - 1) . '?';
+    $stmtMovies = $pdo->prepare("SELECT const, title, year, url FROM movies WHERE const IN ($placeholders)");
+    $stmtMovies->execute($imdbConsts);
+    while ($row = $stmtMovies->fetch(PDO::FETCH_ASSOC)) {
+        $moviesData[$row['const']] = $row;
+    }
+}
+
+// Film-Daten zu Oscars hinzufügen
+foreach ($oscars as &$o) {
+    if (!empty($o['imdb_const']) && isset($moviesData[$o['imdb_const']])) {
+        $o['title'] = $moviesData[$o['imdb_const']]['title'];
+        $o['movie_year'] = $moviesData[$o['imdb_const']]['year'];
+        $o['url'] = $moviesData[$o['imdb_const']]['url'];
+    } else {
+        $o['title'] = null;
+        $o['movie_year'] = null;
+        $o['url'] = null;
+    }
+}
+unset($o);
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 

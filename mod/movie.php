@@ -36,12 +36,11 @@ if ($const !== '') {
         
         // Oscar-Nominierungen laden
         $stmtOscar = $pdo->prepare('
-            SELECT on1.*, oa.year, oc.german AS category_german, oc.name AS category_name
+            SELECT on1.*, oc.german AS category_german, oc.name AS category_name
             FROM oscar_nominations on1
-            INNER JOIN oscar_awards oa ON oa.id = on1.award_id
             INNER JOIN oscar_category oc ON oc.id = on1.category_id
             WHERE on1.imdb_const = ?
-            ORDER BY oa.year DESC, on1.winner DESC
+            ORDER BY on1.year DESC, on1.winner DESC
         ');
         $stmtOscar->execute([$const]);
         $oscars = $stmtOscar->fetchAll(PDO::FETCH_ASSOC);

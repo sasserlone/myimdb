@@ -6,17 +6,11 @@ function loadModule($mod)
         case 'home':
             require_once 'mod/home.php';
             break;
-        case 'import_ratings':
-            require_once 'mod/import_ratings.php';
-            break;
-        case 'import':
-            require_once 'mod/import.php';
+        case 'import_imdb':
+            require_once 'mod/import_imdb.php';
             break;
         case 'import_movies':
             require_once 'mod/import_movies.php';
-            break;
-        case 'import_episodes':
-            require_once 'mod/import_episodes.php';
             break;
         case 'oscars':
             require_once 'mod/oscars.php';
@@ -36,8 +30,8 @@ function loadModule($mod)
         case 'movies_actor':
             require_once 'mod/movies_actor.php';
             break;
-        case 'import_covers':
-            require_once 'mod/import_covers.php';
+        case 'import_omdb':
+            require_once 'mod/import_omdb.php';
             break;
       default:
             require_once 'mod/home.php';

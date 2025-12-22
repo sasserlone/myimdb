@@ -56,12 +56,10 @@ header('Content-Type: text/html; charset=utf-8');
                             Import
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="importDropdown">
-                            <li><a class="dropdown-item" href="?mod=import_ratings">Ratings</a></li>
-                            <li><a class="dropdown-item" href="?mod=import">Import</a></li>
+                            <li><a class="dropdown-item" href="?mod=import_imdb">IMDB</a></li>
                             <li><a class="dropdown-item" href="?mod=import_movies">Filme</a></li>
-                            <li><a class="dropdown-item" href="?mod=import_episodes">Episoden</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="?mod=import_covers">Cover</a></li>
+                            <li><a class="dropdown-item" href="?mod=import_omdb">OMDB</a></li>
                         </ul>
                     </li>
                     

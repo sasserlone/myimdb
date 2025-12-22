@@ -261,7 +261,7 @@ $totalCount = (int)$stmtTotal->fetchColumn();
 
 <div class="row">
     <div class="col-12">
-        <h2>Cover importieren</h2>
+        <h2>OMDB Metadaten und Cover importieren</h2>
 
         <div class="card mb-3" style="background: var(--card-bg); border-color: var(--table-border);">
             <div class="card-body">

@@ -15,8 +15,17 @@ function loadModule($mod)
         case 'import_oscars':
             require_once 'mod/import_oscars.php';
             break;
+        case 'import_golden_globes':
+            require_once 'mod/import_golden_globes.php';
+            break;
         case 'oscars':
             require_once 'mod/oscars.php';
+            break;
+        case 'oscars':
+            require_once 'mod/oscars.php';
+            break;
+        case 'golden_globes':
+            require_once 'mod/golden_globes.php';
             break;
         case 'movies':
             require_once 'mod/movies.php';

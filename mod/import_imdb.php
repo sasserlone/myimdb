@@ -17,6 +17,97 @@ if (!is_dir($logsDir)) {
 $logFiles = [];
 
 // ****************************************************************************
+// IMDb Datasets Download und Entpacken
+// ****************************************************************************
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['download_imdb_datasets'])) {
+    @set_time_limit(0);
+    @ignore_user_abort(true);
+    
+    $downloadDir = __DIR__ . '/../downloads';
+    if (!is_dir($downloadDir)) {
+        @mkdir($downloadDir, 0777, true);
+    }
+    
+    $datasets = [
+        'title.episode' => 'https://datasets.imdbws.com/title.episode.tsv.gz',
+        'title.principals' => 'https://datasets.imdbws.com/title.principals.tsv.gz',
+        'name.basics' => 'https://datasets.imdbws.com/name.basics.tsv.gz'
+    ];
+    
+    $downloadedFiles = [];
+    $downloadErrors = [];
+    
+    foreach ($datasets as $name => $url) {
+        $gzFile = $downloadDir . DIRECTORY_SEPARATOR . $name . '.tsv.gz';
+        $tsvFile = $downloadDir . DIRECTORY_SEPARATOR . $name . '.tsv';
+        
+        // Download
+        $message .= "Lade $name herunter...<br>";
+        $ch = curl_init($url);
+        $fp = fopen($gzFile, 'w');
+        
+        if ($fp === false) {
+            $downloadErrors[] = "Konnte Datei nicht erstellen: $gzFile";
+            continue;
+        }
+        
+        curl_setopt($ch, CURLOPT_FILE, $fp);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 3600); // 1 Stunde Timeout
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0');
+        
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        
+        fclose($fp);
+        curl_close($ch);
+        
+        if ($result === false || $httpCode !== 200) {
+            $downloadErrors[] = "Download fehlgeschlagen für $name (HTTP $httpCode)";
+            @unlink($gzFile);
+            continue;
+        }
+        
+        $message .= "✓ $name heruntergeladen (" . round(filesize($gzFile) / 1024 / 1024, 2) . " MB)<br>";
+        
+        // Entpacken
+        $message .= "Entpacke $name...<br>";
+        
+        $gzHandle = gzopen($gzFile, 'rb');
+        $outHandle = fopen($tsvFile, 'wb');
+        
+        if ($gzHandle === false || $outHandle === false) {
+            $downloadErrors[] = "Konnte $name nicht entpacken";
+            if ($gzHandle) gzclose($gzHandle);
+            if ($outHandle) fclose($outHandle);
+            continue;
+        }
+        
+        while (!gzeof($gzHandle)) {
+            $buffer = gzread($gzHandle, 4096);
+            fwrite($outHandle, $buffer);
+        }
+        
+        gzclose($gzHandle);
+        fclose($outHandle);
+        
+        @unlink($gzFile); // Komprimierte Datei löschen
+        
+        $message .= "✓ $name entpackt (" . round(filesize($tsvFile) / 1024 / 1024, 2) . " MB)<br>";
+        $downloadedFiles[$name] = $tsvFile;
+    }
+    
+    if (!empty($downloadErrors)) {
+        $error = implode('<br>', $downloadErrors);
+    } else {
+        $message .= "<br><strong>✓ Alle Dateien erfolgreich heruntergeladen und entpackt!</strong><br>";
+        $message .= "Die Dateien befinden sich in: <code>" . htmlspecialchars($downloadDir) . "</code><br>";
+        $message .= "Du kannst nun die Pipeline mit diesem Ordner starten.";
+    }
+}
+
+// ****************************************************************************
 // IMDb TSV Pipeline (Episodes -> Principals -> Names)
 // ****************************************************************************
 
@@ -574,10 +665,21 @@ try {
             <h2>⚙️ IMDb TSV Pipeline</h2>
             <p class="text-muted">Episoden → Principals → Namen nacheinander importieren</p>
 
+            <!-- Download Button -->
+            <form method="POST" class="mb-3">
+                <button type="submit" name="download_imdb_datasets" class="btn btn-success btn-sm w-100" 
+                        onclick="return confirm('Downloads können mehrere Minuten dauern. Fortfahren?')">
+                    ⬇️ IMDb Datasets automatisch herunterladen
+                </button>
+                <small class="text-muted d-block mt-1">Lädt automatisch von datasets.imdbws.com herunter und entpackt in den downloads/ Ordner</small>
+            </form>
+
             <form method="POST" enctype="multipart/form-data">
                 <div class="mb-3">
                     <label class="form-label">IMDb TSV Ordner</label>
-                    <input type="text" class="form-control form-control-sm" name="base_dir" id="base_dir" placeholder="C:\\Pfad\\zum\\Ordner" value="<?php echo isset($_POST['base_dir']) ? h($_POST['base_dir']) : '';?>">
+                    <input type="text" class="form-control form-control-sm" name="base_dir" id="base_dir" 
+                           placeholder="C:\\Pfad\\zum\\Ordner" 
+                           value="<?php echo isset($_POST['base_dir']) ? h($_POST['base_dir']) : realpath(__DIR__ . '/../downloads');?>">
                     <small class="text-muted">Erwartet: <code>title.episode.tsv</code>, <code>title.principals.tsv</code> und <code>name.basics.tsv</code> in diesem Ordner. CSV wird als Fallback auch erkannt.</small>
                 </div>
                 <details class="mb-2">

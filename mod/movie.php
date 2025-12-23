@@ -99,7 +99,7 @@ foreach ($principals as $p) {
                         <div class="col-md-9">
                             <?php if (!empty($movie['plot'])): ?>
                                 <div class="mb-3">
-                                    <div><strong>Plot:</strong><br><?php echo nl2br(h($movie['plot'])); ?></div>
+                                    <div><strong>Plot: </strong><?php echo nl2br(h($movie['plot'])); ?></div>
                                 </div>
                             <?php endif; ?>
                             <div class="row mb-2">

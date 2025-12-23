@@ -49,6 +49,9 @@ header('Content-Type: text/html; charset=utf-8');
                     <li class="nav-item">
                         <a class="nav-link <?=($mod == 'oscars') ? 'active' : '';?>" href="?mod=oscars">Oscars</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?=($mod == 'golden_globes') ? 'active' : '';?>" href="?mod=golden_globes">Golden Globes</a>
+                    </li>
             
                     <!-- Dropdown Menü für Imports -->
                     <li class="nav-item dropdown">
@@ -59,6 +62,7 @@ header('Content-Type: text/html; charset=utf-8');
                             <li><a class="dropdown-item" href="?mod=import_imdb">IMDB</a></li>
                             <li><a class="dropdown-item" href="?mod=import_movies">Filme</a></li>
                             <li><a class="dropdown-item" href="?mod=import_oscars">Oscars</a></li>
+                            <li><a class="dropdown-item" href="?mod=import_golden_globes">Golden Globes</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="?mod=import_omdb">OMDB</a></li>
                         </ul>

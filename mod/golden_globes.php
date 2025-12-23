@@ -40,10 +40,10 @@ $yearStmt = $pdo->query('SELECT DISTINCT year_award FROM golden_globe_nomination
 $allYears = $yearStmt->fetchAll(PDO::FETCH_COLUMN);
 
 // Get all distinct categories
-$categoryStmt = $pdo->query('SELECT id, name FROM golden_globe_category ORDER BY name');
+$categoryStmt = $pdo->query('SELECT id, name, german FROM golden_globe_category ORDER BY COALESCE(german, name)');
 $allCategories = [];
 while ($row = $categoryStmt->fetch(PDO::FETCH_ASSOC)) {
-    $allCategories[$row['id']] = $row['name'];
+    $allCategories[$row['id']] = !empty($row['german']) ? $row['german'] : $row['name'];
 }
 
 // Build WHERE clause
@@ -111,11 +111,11 @@ if (empty($whereParts)) {
 
 // Daten laden - OHNE movies JOIN für bessere Performance
 $selectSql = 'SELECT gg.id, gg.imdb_const, gg.nominee, gg.film, gg.winner, gg.year_film, gg.year_award, gg.ceremony,
-              gc.name AS category_name
+              COALESCE(gc.german, gc.name) AS category_name
               FROM golden_globe_nominations gg
               INNER JOIN golden_globe_category gc ON gc.id = gg.category_id
               ' . $whereClause . ' 
-              ORDER BY gg.year_award DESC, gc.name ASC, gg.winner DESC, gg.nominee ASC
+              ORDER BY gg.year_award DESC, COALESCE(gc.german, gc.name) ASC, gg.winner DESC, gg.nominee ASC
               LIMIT ? OFFSET ?';
 $stmt = $pdo->prepare($selectSql);
 $paramIndex = 1;

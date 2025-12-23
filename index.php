@@ -68,6 +68,17 @@ header('Content-Type: text/html; charset=utf-8');
                         </ul>
                     </li>
                     
+                    <!-- Dropdown Menü für Data -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle <?=($mod == 'data_golden_globes' || $mod == 'data_oscars') ? 'active' : '';?>" href="#" id="importDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Datenpflege
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="importDropdown">
+                            <li><a class="dropdown-item" href="?mod=data_golden_globes">Golden Globes</a></li>
+                            <li><a class="dropdown-item" href="?mod=data_oscars">Oscars</a></li>
+                        </ul>
+                    </li>
+                    
                 </ul>
                 <div class="d-flex">
                     <button id="toggle-mode" class="btn btn-outline-secondary btn-sm ms-2" title="Dark/Light Mode" aria-label="Theme wechseln"><span class="toggle-icon"></span></button>

@@ -5,6 +5,98 @@ $message = '';
 $error = '';
 
 // ****************************************************************************
+// IMDb-Matching für bereits importierte Einträge
+// ****************************************************************************
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['match_imdb'])) {
+    try {
+        $pdo = getConnection();
+        
+        // Alle Einträge ohne imdb_const aber mit Film-Titel laden
+        $stmtUnmatched = $pdo->query('
+            SELECT id, film, year_film 
+            FROM golden_globe_nominations 
+            WHERE film IS NOT NULL 
+            AND film != "" 
+            AND imdb_const IS NULL
+        ');
+        $unmatchedEntries = $stmtUnmatched->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (empty($unmatchedEntries)) {
+            $message = "✓ Alle Einträge mit Film-Titel haben bereits eine IMDb-Verknüpfung.";
+        } else {
+            $pdo->beginTransaction();
+            
+            $matchedCount = 0;
+            $stmtUpdate = $pdo->prepare('UPDATE golden_globe_nominations SET imdb_const = ? WHERE id = ?');
+            
+            foreach ($unmatchedEntries as $entry) {
+                $film = $entry['film'];
+                $yearFilm = (int)$entry['year_film'];
+                $id = $entry['id'];
+                
+                // Exakter Match
+                $stmtMatch = $pdo->prepare('
+                    SELECT const FROM movies 
+                    WHERE (LOWER(title) = LOWER(?) OR LOWER(original_title) = LOWER(?))
+                    AND year BETWEEN ? AND ?
+                    AND title_type != "Fernsehepisode"
+                    LIMIT 1
+                ');
+                $stmtMatch->execute([$film, $film, $yearFilm - 2, $yearFilm + 2]);
+                $match = $stmtMatch->fetch(PDO::FETCH_ASSOC);
+                
+                if ($match) {
+                    $stmtUpdate->execute([$match['const'], $id]);
+                    $matchedCount++;
+                } else {
+                    // Fuzzy-Match
+                    $cleanFilm = preg_replace('/^(the|a|an)\s+/i', '', $film);
+                    $cleanFilm = preg_replace('/[^\w\s]/', '', $cleanFilm);
+                    
+                    $stmtFuzzy = $pdo->prepare('
+                        SELECT const, title FROM movies 
+                        WHERE (LOWER(REPLACE(REPLACE(REPLACE(LOWER(title), "the ", ""), "a ", ""), "an ", "")) LIKE ?
+                               OR LOWER(REPLACE(REPLACE(REPLACE(LOWER(original_title), "the ", ""), "a ", ""), "an ", "")) LIKE ?)
+                        AND year BETWEEN ? AND ?
+                        AND title_type != "Fernsehepisode"
+                        LIMIT 1
+                    ');
+                    
+                    try {
+                        $searchPattern = '%' . strtolower($cleanFilm) . '%';
+                        $stmtFuzzy->execute([$searchPattern, $searchPattern, $yearFilm - 2, $yearFilm + 2]);
+                        $fuzzyMatch = $stmtFuzzy->fetch(PDO::FETCH_ASSOC);
+                        if ($fuzzyMatch) {
+                            $stmtUpdate->execute([$fuzzyMatch['const'], $id]);
+                            $matchedCount++;
+                        }
+                    } catch (Exception $e) {
+                        // Skip
+                    }
+                }
+            }
+            
+            $pdo->commit();
+            
+            $totalUnmatched = count($unmatchedEntries);
+            $stillUnmatched = $totalUnmatched - $matchedCount;
+            
+            $message = "✓ IMDb-Matching abgeschlossen:<br>";
+            $message .= "• Neue Verknüpfungen: $matchedCount<br>";
+            $message .= "• Nicht gefunden: $stillUnmatched<br>";
+            $message .= "• Match-Rate: " . round($matchedCount / $totalUnmatched * 100, 1) . "%";
+        }
+        
+    } catch (Exception $e) {
+        if (isset($pdo) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $error = 'IMDb-Matching fehlgeschlagen: ' . $e->getMessage();
+    }
+}
+
+// ****************************************************************************
 // Golden Globe Awards Import (CSV)
 // ****************************************************************************
 
@@ -23,7 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_import'])) {
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS golden_globe_category (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(255) NOT NULL UNIQUE
+                name VARCHAR(255) NOT NULL UNIQUE,
+                german VARCHAR(255) DEFAULT NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
         ");
         
@@ -108,11 +201,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_import'])) {
                     // Strategie: Exakter Titel-Match mit Jahrestoleranz ±2 Jahre
                     $stmtMatch = $pdo->prepare('
                         SELECT const FROM movies 
-                        WHERE LOWER(title) = LOWER(?) 
+                        WHERE (LOWER(title) = LOWER(?) OR LOWER(original_title) = LOWER(?))
                         AND year BETWEEN ? AND ?
+                        AND title_type != "Fernsehepisode"
                         LIMIT 1
                     ');
-                    $stmtMatch->execute([$film, $yearFilm - 2, $yearFilm + 2]);
+                    $stmtMatch->execute([$film, $film, $yearFilm - 2, $yearFilm + 2]);
                     $match = $stmtMatch->fetch(PDO::FETCH_ASSOC);
                     
                     if ($match) {
@@ -125,14 +219,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_import'])) {
                         
                         $stmtFuzzy = $pdo->prepare('
                             SELECT const FROM movies 
-                            WHERE LOWER(REGEXP_REPLACE(REGEXP_REPLACE(title, "^(the|a|an) ", "", "i"), "[^a-zA-Z0-9 ]", "")) = LOWER(?)
+                            WHERE (LOWER(REGEXP_REPLACE(REGEXP_REPLACE(title, "^(the|a|an) ", "", "i"), "[^a-zA-Z0-9 ]", "")) = LOWER(?)
+                                   OR LOWER(REGEXP_REPLACE(REGEXP_REPLACE(original_title, "^(the|a|an) ", "", "i"), "[^a-zA-Z0-9 ]", "")) = LOWER(?))
                             AND year BETWEEN ? AND ?
+                            AND title_type != "Fernsehepisode"
                             LIMIT 1
                         ');
                         
                         // Wenn REGEXP_REPLACE nicht verfügbar, einfacher Ansatz
                         try {
-                            $stmtFuzzy->execute([$cleanFilm, $yearFilm - 2, $yearFilm + 2]);
+                            $stmtFuzzy->execute([$cleanFilm, $cleanFilm, $yearFilm - 2, $yearFilm + 2]);
                             $fuzzyMatch = $stmtFuzzy->fetch(PDO::FETCH_ASSOC);
                             if ($fuzzyMatch) {
                                 $imdbConst = $fuzzyMatch['const'];
@@ -250,6 +346,28 @@ try {
                     </a>
                 </div>
             </form>
+            
+            <?php if ($stats['total_nominations'] > 0): ?>
+                <hr class="my-4">
+                
+                <h4>🔗 IMDb-Verknüpfungen aktualisieren</h4>
+                <p class="text-muted">Verknüpfe bereits importierte Golden Globe-Einträge nachträglich mit Filmen aus der Datenbank.</p>
+                
+                <form method="POST" class="mt-3">
+                    <div class="info-box">
+                        <strong>ℹ️ Hinweis:</strong><br>
+                        • Sucht nach Filmen in der movies-Tabelle anhand des Titels<br>
+                        • Aktualisiert nur Einträge ohne bestehende IMDb-Verknüpfung<br>
+                        • Verwendet exaktes und Fuzzy-Matching (±2 Jahre Toleranz)
+                    </div>
+                    
+                    <div class="button-group mt-3">
+                        <button type="submit" name="match_imdb" class="import-btn btn-info">
+                            🔗 IMDb-Verknüpfungen erstellen
+                        </button>
+                    </div>
+                </form>
+            <?php endif; ?>
         </div>
     </div>
 </div>

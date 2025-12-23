@@ -19,6 +19,7 @@ $pdo = getConnection();
 $movie = null;
 $principals = [];
 $oscars = [];
+$golden_globes = [];
 
 if ($const !== '') {
     $stmt = $pdo->prepare('SELECT * FROM movies WHERE `const` = ? LIMIT 1');
@@ -44,6 +45,17 @@ if ($const !== '') {
         ');
         $stmtOscar->execute([$const]);
         $oscars = $stmtOscar->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Golden Globe-Auszeichnungen laden
+        $stmtGG = $pdo->prepare('
+            SELECT gg.*, gc.german AS category_german, gc.name AS category_name
+            FROM golden_globe_nominations gg
+            INNER JOIN golden_globe_category gc ON gc.id = gg.category_id
+            WHERE gg.imdb_const = ?
+            ORDER BY gg.year_award DESC, gg.winner DESC
+        ');
+        $stmtGG->execute([$const]);
+        $golden_globes = $stmtGG->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 
@@ -186,6 +198,50 @@ foreach ($principals as $p) {
                                                             <?php echo !empty($oscar['category_german']) ? h($oscar['category_german']) : h($oscar['category_name']); ?>
                                                             <?php if (!empty($oscar['nominated'])): ?>
                                                                 <span style="opacity: 0.8;"> – <?php echo h($oscar['nominated']); ?></span>
+                                                            <?php endif; ?>
+                                                        </li>
+                                                    <?php endforeach; ?>
+                                                </ul>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <?php if (!empty($golden_globes)): ?>
+                                <div class="mt-3">
+                                    <div><strong>🎭 Golden Globe-Auszeichnungen:</strong></div>
+                                    <div class="mt-2">
+                                        <?php 
+                                        $ggWins = array_filter($golden_globes, function($gg) { return $gg['winner'] == 1; });
+                                        $ggNoms = array_filter($golden_globes, function($gg) { return $gg['winner'] == 0; });
+                                        ?>
+                                        <?php if (!empty($ggWins)): ?>
+                                            <div class="mb-2">
+                                                <strong style="color: gold;">🏆 Gewonnen (<?php echo count($ggWins); ?>):</strong>
+                                                <ul class="mb-0 mt-1" style="font-size: 0.95em;">
+                                                    <?php foreach ($ggWins as $gg): ?>
+                                                        <li>
+                                                            <strong><?php echo h($gg['year_award']); ?>:</strong> 
+                                                            <?php echo !empty($gg['category_german']) ? h($gg['category_german']) : h($gg['category_name']); ?>
+                                                            <?php if (!empty($gg['nominee'])): ?>
+                                                                <span style="opacity: 0.8;"> – <?php echo h($gg['nominee']); ?></span>
+                                                            <?php endif; ?>
+                                                        </li>
+                                                    <?php endforeach; ?>
+                                                </ul>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($ggNoms)): ?>
+                                            <div>
+                                                <strong>📋 Nominiert (<?php echo count($ggNoms); ?>):</strong>
+                                                <ul class="mb-0 mt-1" style="font-size: 0.95em;">
+                                                    <?php foreach ($ggNoms as $gg): ?>
+                                                        <li>
+                                                            <strong><?php echo h($gg['year_award']); ?>:</strong> 
+                                                            <?php echo !empty($gg['category_german']) ? h($gg['category_german']) : h($gg['category_name']); ?>
+                                                            <?php if (!empty($gg['nominee'])): ?>
+                                                                <span style="opacity: 0.8;"> – <?php echo h($gg['nominee']); ?></span>
                                                             <?php endif; ?>
                                                         </li>
                                                     <?php endforeach; ?>

@@ -18,6 +18,9 @@ function loadModule($mod)
         case 'import_golden_globes':
             require_once 'mod/import_golden_globes.php';
             break;
+        case 'data_golden_globes':
+            require_once 'mod/data_golden_globes.php';
+            break;
         case 'oscars':
             require_once 'mod/oscars.php';
             break;

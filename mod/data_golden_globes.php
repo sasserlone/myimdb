@@ -109,7 +109,7 @@ if (isset($_GET['edit']) && !isset($_POST['save'])) {
     }
 }
 
-if (isset($_GET['new']) && !isset($_POST['save'])) {
+if (isset($_GET['new']) && !isset($_POST['save']) && !$editMode) {
     $editMode = true;
     $editEntry = [
         'id' => null,
@@ -180,7 +180,7 @@ $sql = "SELECT gg.*, COALESCE(gc.german, gc.name) AS category_name
         FROM golden_globe_nominations gg
         INNER JOIN golden_globe_category gc ON gc.id = gg.category_id
         $whereClause
-        ORDER BY gg.year_award DESC, gg.winner DESC, gg.nominee ASC
+        ORDER BY gg.year_award DESC, COALESCE(gc.german, gc.name) ASC, gg.winner DESC, gg.nominee ASC
         LIMIT ? OFFSET ?";
 $stmt = $pdo->prepare($sql);
 $paramIndex = 1;

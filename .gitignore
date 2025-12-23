@@ -21,5 +21,8 @@ Thumbs.db
 # Database backups
 db/backups/
 
+# downloaded TSV/CSV files
+downloads/
+
 # Uploads (optional, depending on your needs)
 # uploads/

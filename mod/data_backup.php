@@ -80,9 +80,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_backup'])) {
         $fileSize = filesize($backupFile);
         $fileSizeMB = round($fileSize / 1024 / 1024, 2);
         
-        $message = "✓ Backup erfolgreich erstellt!<br>";
-        $message .= "• Datei: db/backup.sql<br>";
-        $message .= "• Größe: $fileSizeMB MB<br>";
+        // SQL-Datei komprimieren
+        $backupFileGz = $backupFile . '.gz';
+        $gz = gzopen($backupFileGz, 'w9'); // 9 = maximale Kompression
+        
+        if ($gz === false) {
+            throw new Exception('Komprimierte Backup-Datei konnte nicht erstellt werden.');
+        }
+        
+        gzwrite($gz, $sqlContent);
+        gzclose($gz);
+        
+        $compressedSize = filesize($backupFileGz);
+        $compressedSizeMB = round($compressedSize / 1024 / 1024, 2);
+        $compressionRatio = round((1 - ($compressedSize / $fileSize)) * 100, 1);
+        
+        // Unkomprimierte SQL-Datei löschen (optional - auskommentieren wenn beide behalten werden sollen)
+        unlink($backupFile);
+        
+        $message = "✓ Backup erfolgreich erstellt und komprimiert!<br>";
+        $message .= "• Datei: db/backup.sql.gz<br>";
+        $message .= "• Originalgröße: $fileSizeMB MB<br>";
+        $message .= "• Komprimiert: $compressedSizeMB MB<br>";
+        $message .= "• Kompression: $compressionRatio%<br>";
         $message .= "• Tabellen: " . count($tables) . "<br>";
         $message .= "• Zeit: " . date('d.m.Y H:i:s');
         
@@ -94,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_backup'])) {
 // ****************************************************************************
 // Backup-Info laden (falls vorhanden)
 // ****************************************************************************
-$backupFile = __DIR__ . '/../db/backup.sql';
+$backupFile = __DIR__ . '/../db/backup.sql.gz';
 $backupExists = file_exists($backupFile);
 $backupInfo = null;
 
@@ -162,11 +182,11 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 <div class="card-body">
                     <h5 class="card-title">📁 Aktuelles Backup</h5>
                     <div class="mt-3">
-                        <div class="mb-2"><strong>Datei:</strong> db/backup.sql</div>
-                        <div class="mb-2"><strong>Größe:</strong> <?php echo $backupInfo['sizeMB']; ?> MB</div>
+                        <div class="mb-2"><strong>Datei:</strong> db/backup.sql.gz</div>
+                        <div class="mb-2"><strong>Größe:</strong> <?php echo $backupInfo['sizeMB']; ?> MB (komprimiert)</div>
                         <div class="mb-2"><strong>Erstellt:</strong> <?php echo $backupInfo['date']; ?></div>
                         <div class="mt-3">
-                            <a href="./db/backup.sql" class="btn btn-sm btn-outline-primary" download>⬇️ Backup herunterladen</a>
+                            <a href="./db/backup.sql.gz" class="btn btn-sm btn-outline-primary" download>⬇️ Backup herunterladen</a>
                         </div>
                     </div>
                 </div>
@@ -184,7 +204,8 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 
                 <div class="alert alert-warning mt-3">
                     <strong>⚠️ Wichtig:</strong><br>
-                    • Das Backup überschreibt die bestehende backup.sql Datei<br>
+                    • Das Backup überschreibt die bestehende backup.sql.gz Datei<br>
+                    • Die Datei wird automatisch mit gzip komprimiert<br>
                     • Große Datenbanken können einige Zeit benötigen<br>
                     • Die Datei wird im Verzeichnis <code>db/</code> gespeichert
                 </div>

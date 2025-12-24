@@ -21,6 +21,9 @@ function loadModule($mod)
         case 'data_golden_globes':
             require_once 'mod/data_golden_globes.php';
             break;
+        case 'data_oscars':
+            require_once 'mod/data_oscars.php';
+            break;
         case 'data_backup':
             require_once 'mod/data_backup.php';
             break;

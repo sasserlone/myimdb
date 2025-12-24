@@ -24,5 +24,9 @@ db/backups/
 # downloaded TSV/CSV files
 downloads/
 
+downloads/*.tsv
+db/*.sql
+
+
 # Uploads (optional, depending on your needs)
 # uploads/

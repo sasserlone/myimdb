@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
         $year = (int)$_POST['year'];
         $categoryId = (int)$_POST['category_id'];
         $nominated = trim($_POST['nominated']);
+        $film = !empty($_POST['film']) ? trim($_POST['film']) : null;
         $imdbConst = !empty($_POST['imdb_const']) ? trim($_POST['imdb_const']) : null;
         $tmdbId = !empty($_POST['tmdb_id']) ? (int)$_POST['tmdb_id'] : null;
         $winner = isset($_POST['winner']) ? 1 : 0;
@@ -40,19 +41,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
             // Update
             $stmt = $pdo->prepare('
                 UPDATE oscar_nominations 
-                SET year = ?, category_id = ?, nominated = ?, imdb_const = ?, tmdb_id = ?, winner = ?
+                SET year = ?, category_id = ?, nominated = ?, film = ?, imdb_const = ?, tmdb_id = ?, winner = ?
                 WHERE id = ?
             ');
-            $stmt->execute([$year, $categoryId, $nominated, $imdbConst, $tmdbId, $winner, $id]);
+            $stmt->execute([$year, $categoryId, $nominated, $film, $imdbConst, $tmdbId, $winner, $id]);
             $message = '✓ Eintrag wurde aktualisiert.';
         } else {
             // Neu anlegen
             $stmt = $pdo->prepare('
                 INSERT INTO oscar_nominations 
-                (year, category_id, nominated, imdb_const, tmdb_id, winner)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (year, category_id, nominated, film, imdb_const, tmdb_id, winner)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ');
-            $stmt->execute([$year, $categoryId, $nominated, $imdbConst, $tmdbId, $winner]);
+            $stmt->execute([$year, $categoryId, $nominated, $film, $imdbConst, $tmdbId, $winner]);
             $message = '✓ Neuer Eintrag wurde angelegt. Formular bleibt für weiteren Eintrag geöffnet.';
             
             // Formular bleibt offen mit den eingegebenen Daten (außer nominated wird geleert)
@@ -67,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
                 'year' => $year,
                 'category_id' => $categoryId,
                 'nominated' => '',  // Leeren für nächsten Eintrag
+                'film' => '',  // Leeren für nächsten Eintrag
                 'imdb_const' => '',
                 'tmdb_id' => '',
                 'winner' => $winner
@@ -111,6 +113,7 @@ if (isset($_GET['new']) && !isset($_POST['save']) && !$editMode) {
         'year' => date('Y'),
         'category_id' => '',
         'nominated' => '',
+        'film' => '',
         'imdb_const' => '',
         'tmdb_id' => '',
         'winner' => 0
@@ -140,7 +143,8 @@ $whereParts = [];
 $params = [];
 
 if ($searchTerm !== '') {
-    $whereParts[] = 'on1.nominated LIKE ?';
+    $whereParts[] = '(on1.nominated LIKE ? OR on1.film LIKE ?)';
+    $params[] = "%$searchTerm%";
     $params[] = "%$searchTerm%";
 }
 
@@ -241,6 +245,13 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                         </div>
                         
                         <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Film</label>
+                                <input type="text" class="form-control" name="film" value="<?php echo h($editEntry['film']); ?>" placeholder="Filmtitel">
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">IMDb Const (tconst)</label>
                                 <input type="text" class="form-control" name="imdb_const" value="<?php echo h($editEntry['imdb_const']); ?>" placeholder="tt1234567">
@@ -272,7 +283,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
         <!-- Filter -->
         <form class="d-flex mb-3" method="get" style="gap:.5rem">
             <input type="hidden" name="mod" value="data_oscars">
-            <input class="form-control form-control-sm" type="search" name="q" placeholder="Suche Nominierte/r" value="<?php echo h($searchTerm); ?>" style="width: 300px;">
+            <input class="form-control form-control-sm" type="search" name="q" placeholder="Suche Nominierte/r oder Film" value="<?php echo h($searchTerm); ?>" style="width: 300px;">
             <select class="form-select form-select-sm" name="year" style="width: auto;">
                 <option value="">Alle Jahre</option>
                 <?php foreach ($years as $year): ?>
@@ -300,6 +311,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                         <th>Jahr</th>
                         <th>Kategorie</th>
                         <th>Nominierte/r</th>
+                        <th>Film</th>
                         <th>IMDb</th>
                         <th>TMDb</th>
                         <th>Status</th>
@@ -308,7 +320,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 </thead>
                 <tbody>
                     <?php if (empty($entries)): ?>
-                        <tr><td colspan="8" class="text-center">Keine Einträge gefunden.</td></tr>
+                        <tr><td colspan="9" class="text-center">Keine Einträge gefunden.</td></tr>
                     <?php else: ?>
                         <?php foreach ($entries as $entry): ?>
                             <tr>
@@ -316,6 +328,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                                 <td><?php echo h($entry['year']); ?></td>
                                 <td style="font-size: 0.9em;"><?php echo h($entry['category_name']); ?></td>
                                 <td><?php echo h($entry['nominated']); ?></td>
+                                <td style="font-size: 0.9em;"><?php echo !empty($entry['film']) ? h($entry['film']) : '<span style="opacity:0.5;">—</span>'; ?></td>
                                 <td>
                                     <?php if (!empty($entry['imdb_const'])): ?>
                                         <a href="?mod=movie&const=<?php echo urlencode($entry['imdb_const']); ?>" title="<?php echo h($entry['imdb_const']); ?>">

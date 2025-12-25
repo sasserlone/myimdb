@@ -70,7 +70,7 @@ header('Content-Type: text/html; charset=utf-8');
                     
                     <!-- Dropdown Menü für Data -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle <?=($mod == 'data_golden_globes' || $mod == 'data_oscars') ? 'active' : '';?>" href="#" id="importDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle <?=($mod == 'data_backup' || $mod == 'data_golden_globes' || $mod == 'data_oscars') ? 'active' : '';?>" href="#" id="importDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             Datenpflege
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="importDropdown">

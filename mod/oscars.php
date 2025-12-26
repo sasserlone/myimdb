@@ -86,7 +86,7 @@ $total = (int)$stmtCount->fetchColumn();
 
 $pages = max(1, (int)ceil($total / $perPage));
 
-// Statistiken ermitteln (nur wenn keine Filter aktiv sind, sonst verwende $total)
+// Statistiken ermitteln
 if (empty($whereParts)) {
     // Schnelle Gesamtstatistik ohne JOINs
     $statsRow = $pdo->query('
@@ -101,11 +101,38 @@ if (empty($whereParts)) {
     $totalYears = $pdo->query('SELECT COUNT(DISTINCT year) FROM oscar_nominations')->fetchColumn();
     $totalCategories = $pdo->query('SELECT COUNT(*) FROM oscar_category')->fetchColumn();
 } else {
-    // Bei aktiven Filtern: verwende die gezählten Ergebnisse
+    // Bei aktiven Filtern: Statistiken aus gefilterten Daten berechnen
     $totalNominations = $total;
-    $totalWinners = 0; // Wird nicht separat gezählt bei Filtern
-    $totalYears = 0;
-    $totalCategories = 0;
+    
+    // Gefilterte Gewinner zählen
+    $winnerCountSql = 'SELECT SUM(winner) FROM oscar_nominations on1 ' . $whereClause;
+    if (!empty($params)) {
+        $stmtWinners = $pdo->prepare($winnerCountSql);
+        $stmtWinners->execute($params);
+        $totalWinners = (int)$stmtWinners->fetchColumn();
+    } else {
+        $totalWinners = (int)$pdo->query($winnerCountSql)->fetchColumn();
+    }
+    
+    // Gefilterte Jahre zählen
+    $yearsCountSql = 'SELECT COUNT(DISTINCT year) FROM oscar_nominations on1 ' . $whereClause;
+    if (!empty($params)) {
+        $stmtYears = $pdo->prepare($yearsCountSql);
+        $stmtYears->execute($params);
+        $totalYears = (int)$stmtYears->fetchColumn();
+    } else {
+        $totalYears = (int)$pdo->query($yearsCountSql)->fetchColumn();
+    }
+    
+    // Gefilterte Kategorien zählen
+    $categoriesCountSql = 'SELECT COUNT(DISTINCT category_id) FROM oscar_nominations on1 ' . $whereClause;
+    if (!empty($params)) {
+        $stmtCategories = $pdo->prepare($categoriesCountSql);
+        $stmtCategories->execute($params);
+        $totalCategories = (int)$stmtCategories->fetchColumn();
+    } else {
+        $totalCategories = (int)$pdo->query($categoriesCountSql)->fetchColumn();
+    }
 }
 
 // Daten laden - OHNE movies JOIN für bessere Performance

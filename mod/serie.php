@@ -145,6 +145,7 @@ $pages = max(1, (int)ceil(max(1, $total) / $perPage));
                                     <td class="text-end numeric"><?php echo $ep['episode_number'] !== null ? h($ep['episode_number']) : '-'; ?></td>
                                     <td>
                                         <a class="btn btn-sm btn-outline-primary" href="https://www.imdb.com/title/<?php echo h($ep['tconst']); ?>/" target="_blank" rel="noopener noreferrer">IMDb</a>
+                                        <a class="btn btn-sm btn-outline-secondary" href="?mod=movie&const=<?php echo urlencode($ep['tconst']); ?>">Details</a>
                                         <form method="post" style="display:inline;">
                                             <input type="hidden" name="delete_episode_id" value="<?php echo $ep['id']; ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Wirklich löschen?');">Löschen</button>

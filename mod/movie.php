@@ -27,6 +27,17 @@ if ($const !== '') {
     $movie = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($movie) {
+        // Prüfen, ob es sich um eine Episode handelt und parent_tconst ermitteln
+        $parentTconst = null;
+        if ($movie['title_type'] === 'Fernsehepisode') {
+            $stmtEpisode = $pdo->prepare('SELECT parent_tconst FROM episodes WHERE tconst = ? LIMIT 1');
+            $stmtEpisode->execute([$const]);
+            $episodeData = $stmtEpisode->fetch(PDO::FETCH_ASSOC);
+            if ($episodeData) {
+                $parentTconst = $episodeData['parent_tconst'];
+            }
+        }
+        
         $stmtP = $pdo->prepare('SELECT mp.*, a.primary_name, a.birth_year, a.death_year, a.primary_profession, a.known_for_titles
             FROM movie_principals mp
             LEFT JOIN actors a ON a.nconst = mp.nconst
@@ -93,12 +104,30 @@ foreach ($principals as $p) {
                         <!-- Cover -->
                         <div class="col-md-3">
                             <?php 
-                            $coverFile = __DIR__ . '/../cover/' . $movie['const'] . '.jpg';
-                            $hasCover = !empty($movie['poster_url']) || file_exists($coverFile);
+                            // Für Episoden: Cover der Serie verwenden
+                            $coverConst = $movie['const'];
+                            if (!empty($parentTconst)) {
+                                $coverConst = $parentTconst;
+                            }
+                            
+                            $coverFile = __DIR__ . '/../cover/' . $coverConst . '.jpg';
+                            $hasCover = file_exists($coverFile);
+                            
+                            // Wenn Episode und kein Serien-Cover vorhanden, versuche Episode-Cover
+                            if (!$hasCover && !empty($parentTconst)) {
+                                $coverConst = $movie['const'];
+                                $coverFile = __DIR__ . '/../cover/' . $coverConst . '.jpg';
+                                $hasCover = file_exists($coverFile);
+                            }
+                            
+                            // Fallback zu poster_url
+                            if (!$hasCover && !empty($movie['poster_url'])) {
+                                $hasCover = true;
+                            }
                             ?>
                             <?php if ($hasCover): ?>
                                 <img src="<?php 
-                                    echo file_exists($coverFile) ? './cover/' . h($movie['const']) . '.jpg' : h($movie['poster_url']);
+                                    echo file_exists($coverFile) ? './cover/' . h($coverConst) . '.jpg' : h($movie['poster_url']);
                                 ?>" class="img-fluid rounded" alt="<?php echo h($movie['title']); ?>" style="width: 100%; max-width: 300px;">
                             <?php else: ?>
                                 <div class="d-flex align-items-center justify-content-center rounded" style="width: 100%; height: 400px; background: var(--card-bg); border: 1px solid var(--table-border);">

@@ -169,7 +169,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
             <select class="form-select form-select-sm" name="year" style="width: auto;">
                 <option value="">Alle Jahre</option>
                 <?php foreach ($allYears as $year): ?>
-                    <option value="<?php echo h($year); ?>" <?php echo $yearFilter === $year ? 'selected' : ''; ?>><?php echo h($year); ?></option>
+                    <option value="<?php echo h($year); ?>" <?php echo $yearFilter == $year ? 'selected' : ''; ?>><?php echo h($year); ?></option>
                 <?php endforeach; ?>
             </select>
             <select class="form-select form-select-sm" name="category" style="width: auto;">

@@ -77,6 +77,7 @@ header('Content-Type: text/html; charset=utf-8');
                             <li><a class="dropdown-item" href="?mod=data_golden_globes">Golden Globes</a></li>
                             <li><a class="dropdown-item" href="?mod=data_oscars">Oscars</a></li>
                             <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="?mod=data_year">Year</a></li>
                             <li><a class="dropdown-item" href="?mod=data_backup">Backup</a></li>
                         </ul>
                     </li>

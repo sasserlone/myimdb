@@ -27,6 +27,9 @@ function loadModule($mod)
         case 'data_backup':
             require_once 'mod/data_backup.php';
             break;
+        case 'data_year':
+            require_once 'mod/data_year.php';
+            break;
         case 'oscars':
             require_once 'mod/oscars.php';
             break;

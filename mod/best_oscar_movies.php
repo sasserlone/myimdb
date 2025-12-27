@@ -14,11 +14,6 @@ if (!empty($_GET['year'])) {
     $yearFilter = trim($_GET['year']);
 }
 
-$typeFilter = isset($_GET['type']) ? $_GET['type'] : 'nominations';
-if (!in_array($typeFilter, ['nominations', 'wins'])) {
-    $typeFilter = 'nominations';
-}
-
 $minCount = isset($_GET['min_count']) ? (int)$_GET['min_count'] : 1;
 if ($minCount < 1) $minCount = 1;
 
@@ -37,20 +32,11 @@ if ($yearFilter !== '') {
     $params[] = $yearFilter;
 }
 
-// Query basierend auf Filter-Typ
-if ($typeFilter === 'wins') {
-    // Nur Gewinner
-    $whereParts[] = 'on1.winner = 1';
-    $havingClause = "HAVING COUNT(*) >= $minCount";
-    $orderBy = 'win_count DESC, nomination_count DESC, m.year DESC';
-} else {
-    // Alle Nominierungen
-    $havingClause = "HAVING COUNT(*) >= $minCount";
-    $orderBy = 'nomination_count DESC, win_count DESC, m.year DESC';
-}
-
 // imdb_const muss vorhanden sein
 $whereParts[] = 'on1.imdb_const IS NOT NULL';
+
+$havingClause = "HAVING COUNT(*) >= $minCount";
+$orderBy = 'win_count DESC, nomination_count DESC, m.year DESC';
 
 $whereClause = 'WHERE ' . implode(' AND ', $whereParts);
 
@@ -141,15 +127,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                 <input type="hidden" name="mod" value="best_oscar_movies">
                 
                 <div class="row g-3">
-                    <div class="col-md-2">
-                        <label for="type" class="form-label">Anzeigen</label>
-                        <select name="type" id="type" class="form-select">
-                            <option value="nominations" <?php echo $typeFilter === 'nominations' ? 'selected' : ''; ?>>Nominierungen</option>
-                            <option value="wins" <?php echo $typeFilter === 'wins' ? 'selected' : ''; ?>>Nur Gewinne</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label for="year" class="form-label">Jahr</label>
                         <select name="year" id="year" class="form-select">
                             <option value="">Alle Jahre</option>
@@ -162,7 +140,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                         </select>
                     </div>
                     
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label for="min_count" class="form-label">Minimum</label>
                         <input type="number" name="min_count" id="min_count" 
                                class="form-control" value="<?php echo $minCount; ?>" min="1">
@@ -276,7 +254,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                         <ul class="pagination justify-content-center">
                             <?php if ($page > 1): ?>
                                 <li class="page-item">
-                                    <a class="page-link" href="?mod=best_oscar_movies&page=<?php echo $page - 1; ?>&type=<?php echo urlencode($typeFilter); ?>&year=<?php echo urlencode($yearFilter); ?>&min_count=<?php echo $minCount; ?>&per_page=<?php echo $perPage; ?>">
+                                    <a class="page-link" href="?mod=best_oscar_movies&page=<?php echo $page - 1; ?>&year=<?php echo urlencode($yearFilter); ?>&min_count=<?php echo $minCount; ?>&per_page=<?php echo $perPage; ?>">
                                         Vorherige
                                     </a>
                                 </li>
@@ -288,7 +266,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                             
                             <?php if ($page < $pages): ?>
                                 <li class="page-item">
-                                    <a class="page-link" href="?mod=best_oscar_movies&page=<?php echo $page + 1; ?>&type=<?php echo urlencode($typeFilter); ?>&year=<?php echo urlencode($yearFilter); ?>&min_count=<?php echo $minCount; ?>&per_page=<?php echo $perPage; ?>">
+                                    <a class="page-link" href="?mod=best_oscar_movies&page=<?php echo $page + 1; ?>&year=<?php echo urlencode($yearFilter); ?>&min_count=<?php echo $minCount; ?>&per_page=<?php echo $perPage; ?>">
                                         Nächste
                                     </a>
                                 </li>

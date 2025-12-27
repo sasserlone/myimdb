@@ -167,7 +167,7 @@ function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                     <h5 class="card-title">🔄 year_2 aktualisieren</h5>
                     <p class="card-text">
                         Setzt für alle Serien und Miniserien die Spalte <code>year_2</code> auf das Jahr der letzten Episode.<br>
-                        <small class="text-muted">Die letzte Episode wird anhand der höchsten Staffel- und Episodennummer ermittelt.</small>
+                        <small class="card-text">Die letzte Episode wird anhand der höchsten Staffel- und Episodennummer ermittelt.</small>
                     </p>
                     <button type="submit" name="update_year2" class="btn btn-primary" onclick="return confirm('year_2 für alle Serien/Miniserien aktualisieren?')">
                         ▶️ Aktualisierung starten

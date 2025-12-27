@@ -61,8 +61,6 @@ header('Content-Type: text/html; charset=utf-8');
                         <ul class="dropdown-menu" aria-labelledby="importDropdown">
                             <li><a class="dropdown-item" href="?mod=import_imdb">IMDB</a></li>
                             <li><a class="dropdown-item" href="?mod=import_movies">Filme</a></li>
-                            <li><a class="dropdown-item" href="?mod=import_oscars">Oscars</a></li>
-                            <li><a class="dropdown-item" href="?mod=import_golden_globes">Golden Globes</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="?mod=import_omdb">OMDB</a></li>
                         </ul>
@@ -75,7 +73,9 @@ header('Content-Type: text/html; charset=utf-8');
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="importDropdown">
                             <li><a class="dropdown-item" href="?mod=data_golden_globes">Golden Globes</a></li>
+                            <li><a class="dropdown-item" href="?mod=data_golden_globes_imdb">Golden Globes IMDB Links</a></li>
                             <li><a class="dropdown-item" href="?mod=data_oscars">Oscars</a></li>
+                            <li><a class="dropdown-item" href="?mod=data_oscars_imdb">Oscar IMDB Links</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="?mod=data_year">Year</a></li>
                             <li><a class="dropdown-item" href="?mod=data_backup">Backup</a></li>

@@ -12,11 +12,11 @@ function loadModule($mod)
         case 'import_movies':
             require_once 'mod/import_movies.php';
             break;
-        case 'import_oscars':
-            require_once 'mod/import_oscars.php';
+        case 'data_oscars_imdb':
+            require_once 'mod/data_oscars_imdb.php';
             break;
-        case 'import_golden_globes':
-            require_once 'mod/import_golden_globes.php';
+        case 'data_golden_globes_imdb':
+            require_once 'mod/data_golden_globes_imdb.php';
             break;
         case 'data_golden_globes':
             require_once 'mod/data_golden_globes.php';

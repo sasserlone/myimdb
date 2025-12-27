@@ -46,16 +46,24 @@ header('Content-Type: text/html; charset=utf-8');
                     <li class="nav-item">
                         <a class="nav-link <?=($mod == 'series') ? 'active' : '';?>" href="?mod=series">Serien</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?=($mod == 'oscars') ? 'active' : '';?>" href="?mod=oscars">Oscars</a>
+           
+                    <!-- Dropdown Menü für Awards -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle <?=($mod == 'oscars' || $mod == 'golden_globes') ? 'active' : '';?>" href="#" id="awardsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Awards
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="awardsDropdown">
+                            <li><a class="dropdown-item" href="?mod=oscars">Oscars</a></li>
+                            <li><a class="dropdown-item" href="?mod=golden_globes">Golden Globes</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="?mod=best_oscar_movies">Oscar Spitzenreiter</a></li>
+                            <li><a class="dropdown-item" href="?mod=best_golden_globe_movies">Golden Globe Spitzenreiter</a></li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?=($mod == 'golden_globes') ? 'active' : '';?>" href="?mod=golden_globes">Golden Globes</a>
-                    </li>
-            
+                    
                     <!-- Dropdown Menü für Imports -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle <?=($mod == 'import_ratings' || $mod == 'import_movies') ? 'active' : '';?>" href="#" id="importDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle <?=($mod == 'import_imdb' || $mod == 'import_movies' || $mod == 'import_omdb') ? 'active' : '';?>" href="#" id="importDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             Import
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="importDropdown">

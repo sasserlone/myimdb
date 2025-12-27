@@ -30,8 +30,11 @@ function loadModule($mod)
         case 'data_year':
             require_once 'mod/data_year.php';
             break;
-        case 'oscars':
-            require_once 'mod/oscars.php';
+        case 'best_golden_globe_movies':
+            require_once 'mod/best_golden_globe_movies.php';
+            break;
+        case 'best_oscar_movies':
+            require_once 'mod/best_oscar_movies.php';
             break;
         case 'oscars':
             require_once 'mod/oscars.php';
